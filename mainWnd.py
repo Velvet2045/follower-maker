@@ -1,11 +1,11 @@
+# version: 0.15
+
 import random
 import os, pickle
 from PyQt5 import QtCore, QtGui, QtWidgets
 import threading, requests, time
 import instapy
 import logging.handlers
-
-
 
 # run instapy function..
 def startActivity(row,
