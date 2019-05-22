@@ -3,8 +3,16 @@ import os, pickle
 from PyQt5 import QtCore, QtGui, QtWidgets
 import threading, time
 import instapy
+from update import check_version
+from update import apply_use
+from uuid import getnode as get_mac
 
-PGM_VERSION = 0.2
+PGM_VERSION = 0.3
+
+ERROR_NONE = 0
+ERROR_DRIVER = 1
+ERROR_UNIDENTIFIED_USER = 2
+ERROR_OLD_VERSION = 3
 
 TBL_USE_ACCOUNT = 0
 TBL_SITE = 1
@@ -195,7 +203,7 @@ class HashtagDialog(QtWidgets.QDialog):
 
                 hashtags[row].append(val)
 
-        with open('tbH.p', 'wb') as file:
+        with open('db/tbH.p', 'wb') as file:
             pickle.dump(hashtags, file)
 
         self.close()
@@ -239,8 +247,8 @@ class HashtagDialog(QtWidgets.QDialog):
         for index in range(1, 11):
             self.tableWidget.setColumnWidth(index, 90)
 
-        if os.path.isfile('tbH.p'):
-            with open('tbH.p', 'rb') as file:
+        if os.path.isfile('db/tbH.p'):
+            with open('db/tbH.p', 'rb') as file:
                 hashtags = pickle.load(file)
                 self.tableWidget.setRowCount(len(hashtags))
             for row in range(0, len(hashtags)):
@@ -321,7 +329,7 @@ class CommentDialog(QtWidgets.QDialog):
                     val = self.tableWidget.item(row, col).text()
                 comments[row].append(val)
 
-        with open('tbC.p', 'wb') as file:
+        with open('db/tbC.p', 'wb') as file:
             pickle.dump(comments, file)
 
         self.close()
@@ -365,8 +373,8 @@ class CommentDialog(QtWidgets.QDialog):
         for index in range(1, 11):
             self.tableWidget.setColumnWidth(index, 90)
 
-        if os.path.isfile('tbC.p'):
-            with open('tbC.p', 'rb') as file:
+        if os.path.isfile('db/tbC.p'):
+            with open('db/tbC.p', 'rb') as file:
                 comments = pickle.load(file)
             self.tableWidget.setRowCount(len(comments))
             for row in range(0, len(comments)):
@@ -449,7 +457,7 @@ class FilterDialog(QtWidgets.QDialog):
 
                 filters[row].append(val)
 
-        with open('tbF.p', 'wb') as file:
+        with open('db/tbF.p', 'wb') as file:
             pickle.dump(filters, file)
 
         self.close()
@@ -493,8 +501,8 @@ class FilterDialog(QtWidgets.QDialog):
         for index in range(1, 11):
             self.tableWidget.setColumnWidth(index, 90)
 
-        if os.path.isfile('tbF.p'):
-            with open('tbF.p', 'rb') as file:
+        if os.path.isfile('db/tbF.p'):
+            with open('db/tbF.p', 'rb') as file:
                 filters = pickle.load(file)
             self.tableWidget.setRowCount(len(filters))
             for row in range(0, len(filters)):
@@ -619,7 +627,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        wndTitle = "Follower Maker v%.1f" % (PGM_VERSION)
+        wndTitle = "Follower Maker v%.1f" % (0.2)
         MainWindow.setWindowTitle(_translate("MainWindow", wndTitle))
         MainWindow.setWindowIcon(QtGui.QIcon('icon/instagram.png'))
         self.grpAccount.setTitle(_translate("MainWindow", "계정 관리"))
@@ -940,7 +948,7 @@ class Ui_MainWindow(object):
                 for row in range(0, len(comments)):
                     self.tableAccount.cellWidget(cnt, TBL_COMMENTS).addItem(comments[row][0])
         else:
-            self.tableAccount.cellWidget(0, TBL_COMMENTS).addItem('그룹1')
+            self.tableAccount.cellWidget(0, TBL_COMMENTS).addItem('None')
 
         filters = self.getFilterData()
         if filters:
@@ -949,7 +957,7 @@ class Ui_MainWindow(object):
                 for row in range(0, len(filters)):
                     self.tableAccount.cellWidget(cnt, TBL_FILTERS).addItem(filters[row][0])
         else:
-            self.tableAccount.cellWidget(0, TBL_FILTERS).addItem('그룹1')
+            self.tableAccount.cellWidget(0, TBL_FILTERS).addItem('None')
 
 
     def getAccountData(self):
@@ -1035,12 +1043,22 @@ class Ui_MainWindow(object):
                 msg = "[%s] 로그 삭제 완료" % txtId
                 printLog(self.txtLog, msg)
 
+    def getBrowserDir(self):
+        return ("%s/assets/chromedriver.exe") % instapy.get_workspace()['path']
+
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    MainWindow.show()
+    bIsNewestVer, errCode, errMsg = check_version(get_mac(), PGM_VERSION, ui.getBrowserDir())
+    if bIsNewestVer:
+        ui.setupUi(MainWindow)
+        MainWindow.show()
+    else:
+        print(errMsg)
+        if errCode == ERROR_UNIDENTIFIED_USER:
+            bApplied, errCode, errMsg = apply_use(get_mac(), ui.getBrowserDir())
+
     sys.exit(app.exec_())
 
