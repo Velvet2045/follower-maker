@@ -2,10 +2,13 @@ import shutil
 import os, pickle
 from PyQt5 import QtCore, QtGui, QtWidgets
 import threading, time
-import instapy
 from update import check_version
 from update import apply_use
-from uuid import getnode as get_mac
+from update import get_notification
+from update import get_mac_address
+from socket import *
+import ctypes
+from os.path import expanduser
 
 PGM_VERSION = 0.3
 
@@ -28,89 +31,26 @@ TBL_FILTERS = 10
 TBL_REPEAT_CNT = 11
 TBL_TAG_SHIFT = 12
 
+PORT = 8081
+SERVER_SOCK = socket(AF_INET, SOCK_STREAM)
 
-# run instapy function..
-def startActivity(row=0,
-                  accounts=None,
-                  hashtags=None,
-                  comments=None,
-                  filters=None,
-                  txtLogger=None,
-                  bHeadless=False):
-    id = str(accounts[row][TBL_ID])
-    pwd = str(accounts[row][TBL_PW])
-    session = instapy.InstaPy(username=id, password=pwd, headless_browser=bHeadless,
-                              show_logs=True, txt_logger=txtLogger)
-    session.login()
-    try:
-        session.set_quota_supervisor(enabled=True,
-                                     sleep_after=["likes", "comments", "follows", "unfollows",
-                                                  "server_calls_h"], sleepyhead=True, stochastic_flow=True,
-                                     notify_me=True,
-                                     peak_likes=(120, 1020),
-                                     peak_comments=(120, 1020),
-                                     peak_follows=(120, 1020),
-                                     peak_unfollows=(120, 1020),
-                                     peak_server_calls=(None, 4700))
-
-        if accounts[row][TBL_USE_COMMENT]:
-            valComments = []
-            for col in range(1, 11):
-                comment = comments[int(accounts[row][TBL_COMMENTS])][col]
-                if not comment == 'None':
-                    valComments.append(comment)
-            if valComments:
-                session.set_do_comment(enabled=True, percentage=50)
-                session.set_comments(valComments)
-
-        if accounts[row][TBL_USE_FILTER]:
-            valFilters = []
-            for col in range(1, 11):
-                filter = filters[int(accounts[row][TBL_FILTERS])][col]
-                # print(hashtag)
-                if not filter == 'None':
-                    valFilters.append(filter)
-            if valFilters:
-                session.set_dont_like(tags=valFilters)
-
-        if accounts[row][TBL_USE_LIKE] or \
-                accounts[row][TBL_USE_FOLLOW]:
-            valHashtags = []
-            for col in range(1, 11):
-                hashtag = hashtags[int(accounts[row][TBL_HASHTAGS])][col]
-                # print(hashtag)
-                if not hashtag == 'None':
-                    valHashtags.append(hashtag)
-            if valHashtags and accounts[row][TBL_USE_LIKE]:
-                if accounts[row][TBL_USE_FOLLOW]:
-                    session.set_do_follow(enabled=True, percentage=50)
-                printLog(txtLogger, "좋아요/댓글/팔로우 실행")
-                for cnt in range(int(accounts[row][TBL_REPEAT_CNT])):
-                    session.like_by_tags(tags=valHashtags, amount=int(accounts[row][TBL_TAG_SHIFT]))
-                printLog(txtLogger, "좋아요/댓글/팔로우 완료")
-                s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개" % (session.liked_img,
-                                                     session.commented, session.followed)
-                printLog(txtLogger, s)
-            else:
-                printLog(txtLogger, "좋아요/댓글/팔로우 실행")
-                for cnt in range(int(accounts[row][TBL_REPEAT_CNT])):
-                    session.follow_by_tags(tags=valHashtags, amount=int(accounts[row][TBL_TAG_SHIFT]))
-                printLog(txtLogger, "좋아요/댓글/팔로우 완료")
-                s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개" % (session.liked_img,
-                                                     session.commented, session.followed)
-                printLog(txtLogger, s)
-        else:
-            printLog(txtLogger, "좋아요 사용에 체크해주세요.")
-
-        instapy.InstaPy.end_sub(session)
-
-    except:
-        raise
+def receive(txtView, sock):
+    while True:
+        recvData = sock.recv(1024)
+        if not recvData:
+            break
+        s = "[Client] %s" % recvData.decode('utf-8')
+        printLog(txtView, s)
+    sock.close()
 
 def printLog(txtView, log):
     now = time.localtime()
     s = "INFO [%04d-%02d-%02d %02d:%02d:%02d] " % (now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec)
-    txtView.append(str(s + log))
+    if txtView:
+        txtView.append(str(s + log))
+    else:
+        print(str(s + log))
+        msg = ctypes.windll.user32.MessageBoxW(None, str(log), "Follow Maker Noti", 0)
 
 class StoppableThread(threading.Thread):
     """Thread class with a stop() method. The thread itself has to check
@@ -623,6 +563,7 @@ class Ui_MainWindow(object):
 
         self.makeTable()
         self.threads = []
+        self.bRetryConnect = False
         printLog(self.txtLog, "프로그램 시작")
 
     def retranslateUi(self, MainWindow):
@@ -767,7 +708,7 @@ class Ui_MainWindow(object):
                 with open('db/tbF.p', 'rb') as file:
                     filters = pickle.load(file)
                 for cnt in range(0, len(filters)):
-                    cmbFilter.addItem(filters[cnt][TBL_FILTERS])
+                    cmbFilter.addItem(filters[cnt][0])
             else:
                 cmbFilter.addItem('None')
             if accounts:
@@ -865,6 +806,7 @@ class Ui_MainWindow(object):
         txtTagShift = QtWidgets.QTableWidgetItem('50')
         self.tableAccount.setItem(rowCount, TBL_TAG_SHIFT, txtTagShift)
 
+
     def btnDelAccountClicked(self):
         selectedRow = self.tableAccount.currentIndex().row()
         self.tableAccount.removeRow(selectedRow)
@@ -902,33 +844,40 @@ class Ui_MainWindow(object):
         self.btnSetAccountClicked()
         accounts = self.getAccountData()
         hashtags = self.getHashtagData()
-        comments = self.getCommentData()
-        filters = self.getFilterData()
-        bHeadless = self.chkHeadless.isChecked()
 
         if not accounts or not hashtags:
             return
 
-        self.threads.clear()
-        self.threads = []
-        for row in range(0, len(accounts)):
-            if accounts[row][TBL_USE_ACCOUNT]:
-                t = StoppableThread(startActivity, (row, accounts, hashtags, comments, filters,
-                                                    self.txtLog, bHeadless,))
-                self.threads.append(t)
+        # call run.py
+        if not self.bRetryConnect:
+            SERVER_SOCK.bind(('', PORT))
+            self.bRetryConnect = True
+        SERVER_SOCK.listen(1)
 
-        for t in self.threads:
-            t.daemon = True
-            t.start()
+        parser = threading.Thread(target=self.runInstaPy())
+        parser.daemon = True
+        parser.start()
+
+        self.connectionSock, self.addr = SERVER_SOCK.accept()
+        printLog(self.txtLog, "[Server] 접속 완료")
+
+        if self.chkHeadless.isChecked():
+            self.connectionSock.send('True'.encode('utf-8'))
+        else:
+            self.connectionSock.send('False'.encode('utf-8'))
+
+        receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
+        receiver.daemon = True
+        receiver.start()
 
     def btnStopClicked(self):
         printLog(self.txtLog, "좋아요/댓글/팔로우 중지")
-        for t in self.threads:
-            t.stop()
-            t.join()
+        self.connectionSock.send('Terminate'.encode('utf-8'))
 
     def btnNoticeClicked(self):
-        printLog(self.txtLog, "공지사항")
+        bResult, errCode, errMsg = get_notification(ui.getBrowserDir())
+        if bResult:
+            printLog(None, errMsg)
 
     def loadPickleData(self):
         rowCount = self.tableAccount.rowCount()
@@ -958,7 +907,6 @@ class Ui_MainWindow(object):
                     self.tableAccount.cellWidget(cnt, TBL_FILTERS).addItem(filters[row][0])
         else:
             self.tableAccount.cellWidget(0, TBL_FILTERS).addItem('None')
-
 
     def getAccountData(self):
         rowCount = self.tableAccount.rowCount()
@@ -1037,28 +985,45 @@ class Ui_MainWindow(object):
             txtId = self.tableAccount.item(selectedRow, TBL_ID).text()
 
         if not txtId == 'None':
-            logPath = "%s/logs/%s" % (instapy.get_workspace()["path"], txtId)
+            logPath = "%s/InstaPy/logs/%s" % (expanduser("~"), txtId)
             if os.path.isdir(logPath):
                 shutil.rmtree(logPath)
                 msg = "[%s] 로그 삭제 완료" % txtId
                 printLog(self.txtLog, msg)
 
     def getBrowserDir(self):
-        return ("%s/assets/chromedriver.exe") % instapy.get_workspace()['path']
+        return ("%s/InstaPy/assets/chromedriver.exe") % expanduser("~")
+
+    def copyBrower(self):
+        pastePath = "{}/InstaPy/assets".format(expanduser("~"))
+        if not os.path.isdir(pastePath):
+            os.makedirs(os.path.join(pastePath))
+        if not os.path.isfile(self.getBrowserDir()):
+            shutil.copy("chromedriver.exe", pastePath)
+
+    def runInstaPy(self):
+        clientFile = "{}\\run\\run.exe".format(os.getcwd())
+        print(clientFile)
+        os.popen(clientFile)
 
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
-    bIsNewestVer, errCode, errMsg = check_version(get_mac(), PGM_VERSION, ui.getBrowserDir())
+    ui.copyBrower()
+    macAdr = get_mac_address()
+    bIsNewestVer, errCode, errMsg = check_version(macAdr[0], PGM_VERSION, ui.getBrowserDir())
+    printLog(None, errMsg)
     if bIsNewestVer:
         ui.setupUi(MainWindow)
         MainWindow.show()
     else:
-        print(errMsg)
         if errCode == ERROR_UNIDENTIFIED_USER:
-            bApplied, errCode, errMsg = apply_use(get_mac(), ui.getBrowserDir())
+            msg = ctypes.windll.user32.MessageBoxW(None, "프로그램 사용 신청을 하시겠습니까?", "Follow Maker Noti", 4)
+            if msg == 6:
+                bApplied, errCode, errMsg = apply_use(macAdr[0], ui.getBrowserDir())
+                printLog(None, errMsg)
 
     sys.exit(app.exec_())
 
