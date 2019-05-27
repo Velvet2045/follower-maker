@@ -39,7 +39,6 @@ class StoppableThread(threading.Thread):
     def stopped(self):
         return self._stop_event.is_set()
 
-
 def receive(sock):
     while True:
         recvData = sock.recv(1024)
@@ -50,7 +49,6 @@ def receive(sock):
         print(s)
     sock.close()
     sys.exit()
-
 
 # run InstaPy function..
 def startActivity(row=0,
@@ -86,9 +84,9 @@ def startActivity(row=0,
                                dont_skip_business_categories=[])
 
         # dont comment, unfollowing my follower list
-        # my_follwings = session.grab_followers(username=id, amount="full", live_match=True, store_locally=True)
-        # print(my_follwings)
-        # session.set_dont_include(my_follwings)
+        CLIENT_SOCKET.send("팔로워 목록 확인".encode('utf-8'))
+        my_follwers = session.grab_followers(username=id, amount="full", live_match=True, store_locally=True)
+        session.set_dont_include(my_follwers)
 
         if accounts[row][TBL_USE_COMMENT] and comments:
             valComments = []
@@ -138,12 +136,14 @@ def startActivity(row=0,
                     s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개" % (session.liked_img,
                                                          session.commented, session.followed)
                     CLIENT_SOCKET.send(s.encode('utf-8'))
+
+            # unfollow if not follow me
+            CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
+            session.unfollow_users(amount=120, InstapyFollowed=(True, "nonfollowers"), style="FIFO",
+                                   unfollow_after=90 * 60 * 60, sleep_delay=505)
+            CLIENT_SOCKET.send("팔로워 정리 완료".encode('utf-8'))
         else:
                 CLIENT_SOCKET.send("좋아요 사용에 체크해주세요.".encode('utf-8'))
-
-        # unfollow if not follow me
-        session.unfollow_users(amount=120, InstapyFollowed=(True, "nonfollowers"), style="FIFO",
-                               unfollow_after=90*60*60, sleep_delay=505)
 
         instapy.InstaPy.end_sub(session)
 
@@ -188,7 +188,7 @@ def getFilterData():
 
 if __name__ == "__main__":
     CLIENT_SOCKET.connect(('127.0.0.1', PORT))
-
+    CLIENT_SOCKET.send("접속 완료".encode('utf-8'))
     print('[Client] 접속 완료')
 
     accounts = getAccountData()

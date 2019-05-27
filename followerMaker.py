@@ -2,10 +2,7 @@ import shutil
 import os, pickle
 from PyQt5 import QtCore, QtGui, QtWidgets
 import threading, time
-from update import check_version
-from update import apply_use
-from update import get_notification
-from update import get_mac_address
+from update import *
 from socket import *
 import ctypes
 from os.path import expanduser
@@ -16,6 +13,8 @@ ERROR_NONE = 0
 ERROR_DRIVER = 1
 ERROR_UNIDENTIFIED_USER = 2
 ERROR_OLD_VERSION = 3
+ERROR_FAIL_TO_GET_URL = 4
+ERROR_FAIL_TO_DOWNLOAD = 5
 
 TBL_USE_ACCOUNT = 0
 TBL_ID = 1
@@ -63,9 +62,22 @@ def copyBrower():
         shutil.copy("chromedriver.exe", pastePath)
 
 def runInstaPy():
-    clientFile = "{}\\run\\run.exe".format(os.getcwd())
-    print(clientFile)
-    os.popen(clientFile)
+    file = "{}\\run\\run.exe".format(os.getcwd())
+
+    if os.path.isfile(file):
+        print('run parser: {}'.format(file))
+        os.popen(file)
+    else:
+        print('fail to run parser: {}'.format(file))
+
+def runInstaller():
+    file = "{}\\installer\\installer.exe".format(os.getcwd())
+
+    if os.path.isfile(file):
+        print('run installer: {}'.format(file))
+        os.popen(file)
+    else:
+        print('fail to run installer: {}'.format(file))
 
 def getAccountData():
     if os.path.isfile('db/tbA.p'):
@@ -1022,12 +1034,28 @@ if __name__ == "__main__":
     if bResult:
         ui.setupUi(MainWindow)
         MainWindow.show()
+
     else:
         if errCode == ERROR_UNIDENTIFIED_USER:
             msg = ctypes.windll.user32.MessageBoxW(None, "프로그램 사용 신청을 하시겠습니까?", "Follow Maker Noti", 4)
             if msg == 6:
                 bResult, errCode, errMsg = apply_use(macAdr[0], getBrowserDir())
                 printLog(None, errMsg)
+
+        elif errCode == ERROR_OLD_VERSION:
+            msg = ctypes.windll.user32.MessageBoxW(None, "프로그램을 업데이트 하시겠습니까?", "Follow Maker Noti", 4)
+            if msg == 6:
+                bResult, errCode, errMsg = downlaod_updatefile(getBrowserDir())
+                if bResult:
+                    printLog(None, "업데이트를 위해 프로그램을 종료합니다.")
+                    installer = threading.Thread(target=runInstaller())
+                    installer.start()
+                    sys.exit()
+                else:
+                    printLog(None, errMsg)
+
+            ui.setupUi(MainWindow)
+            MainWindow.show()
 
     sys.exit(app.exec_())
 

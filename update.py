@@ -9,6 +9,8 @@ ERROR_NONE = 0
 ERROR_DRIVER = 1
 ERROR_UNIDENTIFIED_USER = 2
 ERROR_OLD_VERSION = 3
+ERROR_FAIL_TO_GET_URL = 4
+ERROR_FAIL_TO_DOWNLOAD = 5
 
 USERCODE_PW = '2813'
 UPDATE_PW = '1231'
@@ -178,7 +180,6 @@ def get_chrome_options():
 
     return options
 
-''' Python에서 맥주소를 가져오기! '''
 def get_mac_address():
     arrinfo = {}
     isdevice = 0
@@ -218,3 +219,52 @@ def get_mac_address():
                 isdevice = 0
                 mk+=1
     return arrinfo
+
+def downlaod_updatefile(driverPath):
+    bResult = True
+    errCode = ERROR_NONE
+    errMsg = ''
+    # 크롬창을 띄우지 않는 옵션을 넣는다
+    options = get_chrome_options()
+    try:
+        driver = webdriver.Chrome(driverPath, options=options)
+
+    except WebDriverException as exc:
+        bResult = False
+        errCode = 1
+        errMsg = 'ensure chromedriver is installed at {}'.format(driverPath)
+        return bResult, errCode, errMsg
+
+        url_update = 'https://antistereotypes.tistory.com/23'
+        driver.get(url_update)
+        time.sleep(3)
+
+        # div class: input - group
+        driver.find_element_by_xpath('//*[@id="entry23password"]').send_keys(UPDATE_PW)
+        driver.find_element_by_xpath('//*[@id="content"]/div[1]/div[2]/form/fieldset/button').click()
+
+        html = driver.page_source
+        soup = BeautifulSoup(html, 'html.parser')
+
+        strIniList = soup.find('div', {'class': 'entry-content'})
+
+        strUrl = ''
+        for ini in strIniList:
+            strIni = re.sub('<.+?>', '', str(ini))
+            if not strIni.find('PGM_UPDATE_URL') == -1:
+                strUrl = strIni[strIni.find('=')+1:]
+
+        if not strUrl == '':
+            # msg = ctypes.windll.user32.MessageBoxW(None, "구글 드라이브가 열립니다.\n파일을 다운로드하세요.", "Follow Maker Noti", 4)
+
+            driver.get(strUrl)
+            time.sleep(3)
+
+        else:
+            bResult = False
+            errCode = ERROR_FAIL_TO_GET_URL
+            errMsg = 'fail to get download url'
+
+        driver.quit()
+
+    return bResult, errCode, errMsg
