@@ -73,15 +73,7 @@ def startActivity(row=0,
                                      peak_unfollows=(120, 1020),
                                      peak_server_calls=(None, 4700))
 
-        session.set_skip_users(skip_private=True,
-                               private_percentage=100,
-                               skip_no_profile_pic=False,
-                               no_profile_pic_percentage=100,
-                               skip_business=False,
-                               skip_non_business=False,
-                               business_percentage=100,
-                               skip_business_categories=[],
-                               dont_skip_business_categories=[])
+        session.set_skip_users(skip_private=True, private_percentage=100)
 
         # dont comment, unfollowing my follower list
         CLIENT_SOCKET.send("팔로워 목록 확인".encode('utf-8'))
@@ -120,28 +112,28 @@ def startActivity(row=0,
                 if accounts[row][TBL_USE_FOLLOW]:
                     session.set_do_follow(enabled=True, percentage=50)
                     CLIENT_SOCKET.send("좋아요/댓글/팔로우 실행".encode('utf-8'))
-                for cnt in range(int(accounts[row][TBL_REPEAT_CNT])):
+                for cnt in range(0, int(accounts[row][TBL_REPEAT_CNT])):
                     session.like_by_tags(tags=valHashtags, amount=int(accounts[row][TBL_TAG_SHIFT]),
-                                         use_smart_hashtags=True)
+                                         use_smart_hashtags=False)
                     CLIENT_SOCKET.send("좋아요/댓글/팔로우 완료".encode('utf-8'))
-                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개" % (session.liked_img,
+                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개\n" % (session.liked_img,
                                                          session.commented, session.followed)
                     CLIENT_SOCKET.send(s.encode('utf-8'))
             else:
                 CLIENT_SOCKET.send("좋아요/댓글/팔로우 실행".encode('utf-8'))
-                for cnt in range(int(accounts[row][TBL_REPEAT_CNT])):
+                for cnt in range(0, int(accounts[row][TBL_REPEAT_CNT])):
                     session.follow_by_tags(tags=valHashtags, amount=int(accounts[row][TBL_TAG_SHIFT]),
-                                           use_smart_hashtags=True)
+                                           use_smart_hashtags=False)
                     CLIENT_SOCKET.send("좋아요/댓글/팔로우 완료".encode('utf-8'))
-                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개" % (session.liked_img,
+                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개\n" % (session.liked_img,
                                                          session.commented, session.followed)
                     CLIENT_SOCKET.send(s.encode('utf-8'))
 
             # unfollow if not follow me
-            CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
-            session.unfollow_users(amount=120, InstapyFollowed=(True, "nonfollowers"), style="FIFO",
-                                   unfollow_after=90 * 60 * 60, sleep_delay=505)
-            CLIENT_SOCKET.send("팔로워 정리 완료".encode('utf-8'))
+            # CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
+            # session.unfollow_users(amount=120, InstapyFollowed=(True, "nonfollowers"), style="FIFO",
+            #                       unfollow_after=90 * 60 * 60, sleep_delay=505)
+            # CLIENT_SOCKET.send("팔로워 정리 완료".encode('utf-8'))
         else:
                 CLIENT_SOCKET.send("좋아요 사용에 체크해주세요.".encode('utf-8'))
 

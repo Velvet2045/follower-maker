@@ -53,7 +53,7 @@ def check_version(macId, curVer, driverPath):
         strCode = strIni[strIni.find('=') + 1:]
         if strCode.find(macId) != -1:
             bIncluded = True
-            errMsg = 'Welcome! {} :)'.format(strIni[:strIni.find('=')])
+            errMsg = '환영합니다! {}님 :)'.format(strIni[:strIni.find('=')])
             break
 
     if bIncluded:
@@ -77,11 +77,11 @@ def check_version(macId, curVer, driverPath):
                 if curVer < float(strVer):
                     bResult = False
                     errCode = ERROR_OLD_VERSION
-                    errMsg = 'Need to program update to Follow Maker v{}'.format(strVer)
+                    errMsg = '프로그램 업데이트가 필요합니다.\nNeed to update Follow Maker v{}'.format(strVer)
     else:
         bResult = False
         errCode = ERROR_UNIDENTIFIED_USER
-        errMsg = '등록되지 않은 사용자 확인'
+        errMsg = '등록되지 않은 사용자 확인\nUnidentified User'
 
     driver.quit()
     return bResult, errCode, errMsg
@@ -263,7 +263,7 @@ def downlaod_updatefile(driverPath):
         else:
             bResult = False
             errCode = ERROR_FAIL_TO_GET_URL
-            errMsg = 'fail to get download url'
+            errMsg = '업데이트 URL이 없습니다. 관리자에게 문의해주세요.'
 
         driver.quit()
 
