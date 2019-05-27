@@ -29,8 +29,8 @@ from .util import get_action_delay
 from .util import truncate_float
 from .util import progress_tracker
 from .print_log_writer import log_followed_pool_sub
-from .print_log_writer import log_uncertain_unfollowed_pool
-from .print_log_writer import log_record_all_unfollowed
+from .print_log_writer import log_uncertain_unfollowed_pool_sub
+from .print_log_writer import log_record_all_unfollowed_sub
 from .print_log_writer import get_log_time
 from .relationship_tools import get_followers
 from .relationship_tools import get_nonfollowers
@@ -1429,13 +1429,13 @@ def post_unfollow_cleanup(state, username, person, relationship_data,
         # this user was found in our unfollow list but currently is not
         # being followed
         logtime = get_log_time()
-        log_uncertain_unfollowed_pool(username, person, logger, logfolder,
+        log_uncertain_unfollowed_pool_sub(username, person, logger, logfolder,
                                       logtime, person_id)
         # take a generic 3 seconds of sleep per each uncertain unfollow
         sleep(3)
 
     # save any unfollowed person
-    log_record_all_unfollowed(username, person, logger, logfolder)
+    log_record_all_unfollowed_sub(username, person, logger, logfolder)
     print('')
 
 

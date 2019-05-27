@@ -64,12 +64,12 @@ from .unfollow_util import get_follow_requests
 from .commenters_util import extract_information
 from .commenters_util import users_liked
 from .commenters_util import get_photo_urls_from_profile
-from .relationship_tools import get_following
-from .relationship_tools import get_followers
-from .relationship_tools import get_unfollowers
-from .relationship_tools import get_nonfollowers
-from .relationship_tools import get_fans
-from .relationship_tools import get_mutual_following
+from .relationship_tools import get_following_sub
+from .relationship_tools import get_followers_sub
+from .relationship_tools import get_unfollowers_sub
+from .relationship_tools import get_nonfollowers_sub
+from .relationship_tools import get_fans_sub
+from .relationship_tools import get_mutual_following_sub
 from .database_engine import get_database
 from .text_analytics import text_analysis
 from .text_analytics import yandex_supported_languages
@@ -1090,17 +1090,17 @@ class InstaPy:
                         if do_interact and self.user_interact_amount > 0:
                             # store original value of `self.do_follow`
                             original_do_follow = self.do_follow
-                            # disable following temporarily 
+                            # disable following temporarily
                             # cos the user is already followed
                             self.do_follow = False
-                            
+
                             # disable revalidating user in interact_by_users
                             with self.feature_in_feature("interact_by_users", False):
                                 self.interact_by_users(acc_to_follow,
                                                        self.user_interact_amount,
                                                        self.user_interact_random,
                                                        self.user_interact_media)
-                            
+
                             # revert back to original `self.do_follow` value
                             self.do_follow = original_do_follow
 
@@ -1900,7 +1900,7 @@ class InstaPy:
                     self.logger.error('Invalid Page: {}'.format(err))
 
             self.logger.info('Tag: {}'.format(tag.encode('utf-8')))
-        
+
         self.logger.info('Liked: {}'.format(liked_img))
         self.logger.info('Already Liked: {}'.format(already_liked))
         self.logger.info('Commented: {}'.format(commented))
@@ -3926,7 +3926,7 @@ class InstaPy:
             return self
 
         # Get `followers` data
-        grabbed_followers = get_followers(self.browser,
+        grabbed_followers = get_followers_sub(self.browser,
                                           username,
                                           amount,
                                           self.relationship_data,
@@ -3967,7 +3967,7 @@ class InstaPy:
             return self
 
         # get `following` data
-        grabbed_following = get_following(self.browser,
+        grabbed_following = get_following_sub(self.browser,
                                           username,
                                           amount,
                                           self.relationship_data,
@@ -3994,7 +3994,7 @@ class InstaPy:
         highlight_print(self.username, message, "feature", "info", self.logger)
 
         # get all and active Unfollowers
-        all_unfollowers, active_unfollowers = get_unfollowers(
+        all_unfollowers, active_unfollowers = get_unfollowers_sub(
             self.browser,
             username,
             compare_by,
@@ -4018,7 +4018,7 @@ class InstaPy:
         highlight_print(self.username, message, "feature", "info", self.logger)
 
         # get Nonfollowers
-        nonfollowers = get_nonfollowers(self.browser,
+        nonfollowers = get_nonfollowers_sub(self.browser,
                                         username,
                                         self.relationship_data,
                                         live_match,
@@ -4041,7 +4041,7 @@ class InstaPy:
         highlight_print(self.username, message, "feature", "info", self.logger)
 
         # get Fans
-        fans = get_fans(self.browser,
+        fans = get_fans_sub(self.browser,
                         username,
                         self.relationship_data,
                         live_match,
@@ -4064,7 +4064,7 @@ class InstaPy:
         highlight_print(self.username, message, "feature", "info", self.logger)
 
         # get Mutual Following
-        mutual_following = get_mutual_following(self.browser,
+        mutual_following = get_mutual_following_sub(self.browser,
                                                 username,
                                                 self.relationship_data,
                                                 live_match,
