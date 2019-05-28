@@ -973,8 +973,7 @@ class Ui_MainWindow(object):
         printLog(self.txtLog, "프로그램 시작")
 
         macAdr = get_mac_address()
-        version_checker = threading.Thread(target=check_version_counter(),
-                                           args=(macAdr[0], PGM_VERSION, getBrowserDir()))
+        version_checker = StoppableThread(check_version_counter, (macAdr[0], PGM_VERSION, getBrowserDir()))
         version_checker.daemon = True
         version_checker.start()
 
@@ -1063,9 +1062,9 @@ if __name__ == "__main__":
     copyBrower()
     macAdr = get_mac_address()
     bResult, errCode, errMsg = check_version(macAdr[0], PGM_VERSION, getBrowserDir())
-    bResult = True
-    errCode = ERROR_NONE
-    errMsg = 'Debug Mode'
+    # bResult = True
+    # errCode = ERROR_NONE
+    # errMsg = 'Debug Mode'
     printLog(None, errMsg)
     if bResult:
         ui.setupUi(MainWindow)

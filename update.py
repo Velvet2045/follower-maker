@@ -3,7 +3,7 @@ from selenium.common.exceptions import WebDriverException
 from bs4 import BeautifulSoup
 import os, sys
 import time
-import re
+import re, requests
 
 ERROR_NONE = 0
 ERROR_DRIVER = 1
@@ -16,6 +16,7 @@ USERCODE_PW = '2813'
 UPDATE_PW = '1231'
 APPLY_PW = '1824'
 NOTY_PW = '1175'
+
 def check_version(macId, curVer, driverPath):
     bResult = True
     errCode = ERROR_NONE
@@ -219,6 +220,35 @@ def get_mac_address():
                 mk+=1
     return arrinfo
 
+def download_file_from_google_drive(id, destination):
+    URL = "https://docs.google.com/uc?export=download"
+
+    session = requests.Session()
+
+    response = session.get(URL, params = { 'id' : id }, stream = True)
+    token = get_confirm_token(response)
+
+    if token:
+        params = { 'id' : id, 'confirm' : token }
+        response = session.get(URL, params = params, stream = True)
+
+    save_response_content(response, destination)
+
+def get_confirm_token(response):
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            return value
+
+    return None
+
+def save_response_content(response, destination):
+    CHUNK_SIZE = 32768
+
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(CHUNK_SIZE):
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
+
 def downlaod_updatefile(driverPath):
     bResult = True
     errCode = ERROR_NONE
@@ -254,7 +284,9 @@ def downlaod_updatefile(driverPath):
                 strUrl = strIni[strIni.find('=')+1:]
 
         if not strUrl == '':
-            # msg = ctypes.windll.user32.MessageBoxW(None, "구글 드라이브가 열립니다.\n파일을 다운로드하세요.", "Follow Maker Noti", 4)
+            file_id = strUrl
+            downloadedFile = ("%s\\Downloads\\followerMaker.zip") % expanduser("~")
+            download_file_from_google_drive(file_id, downloadedFile)
 
             driver.get(strUrl)
             time.sleep(3)
