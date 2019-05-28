@@ -16,7 +16,6 @@ USERCODE_PW = '2813'
 UPDATE_PW = '1231'
 APPLY_PW = '1824'
 NOTY_PW = '1175'
-
 def check_version(macId, curVer, driverPath):
     bResult = True
     errCode = ERROR_NONE

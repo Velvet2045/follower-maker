@@ -79,6 +79,35 @@ def runInstaller():
     else:
         print('fail to run installer: {}'.format(file))
 
+def check_version_counter(macId, curVer, driverPath):
+    bResult = True
+    errCode = ERROR_NONE
+    errMsg = ''
+    while bResult:
+        time.sleep(24 * 60 * 60)
+        bResult, errCode, errMsg = check_version(macId, curVer, driverPath)
+
+    if errCode == ERROR_UNIDENTIFIED_USER:
+        msg = ctypes.windll.user32.MessageBoxW(None, "프로그램 사용 신청을 하시겠습니까?", "Follow Maker Noti", 4)
+        if msg == 6:
+            bResult, errCode, errMsg = apply_use(macAdr[0], getBrowserDir())
+            printLog(None, errMsg)
+
+        sys.exit()
+
+    elif errCode == ERROR_OLD_VERSION:
+        msg = ctypes.windll.user32.MessageBoxW(None, "프로그램을 업데이트 하시겠습니까?", "Follow Maker Noti", 4)
+        if msg == 6:
+            bResult, errCode, errMsg = downlaod_updatefile(getBrowserDir())
+            if bResult:
+                printLog(None, "업데이트를 위해 프로그램을 종료합니다.")
+                installer = threading.Thread(target=runInstaller())
+                installer.start()
+                sys.exit()
+            else:
+                printLog(None, errMsg)
+
+
 def getAccountData():
     if os.path.isfile('db/tbA.p'):
         with open('db/tbA.p', 'rb') as file:
@@ -943,6 +972,12 @@ class Ui_MainWindow(object):
 
         printLog(self.txtLog, "프로그램 시작")
 
+        macAdr = get_mac_address()
+        version_checker = threading.Thread(target=check_version_counter(),
+                                           args=(macAdr[0], PGM_VERSION, getBrowserDir()))
+        version_checker.daemon = True
+        version_checker.start()
+
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         wndTitle = "Follower Maker v%.1f" % PGM_VERSION
@@ -980,7 +1015,8 @@ class Ui_MainWindow(object):
     def btnStartClicked(self):
         if self.bSetAccount == False:
             self.btnSetAccountClicked()
-
+        
+        printLog(self.txtLog, "동작 시작")
         accounts = getAccountData()
         hashtags = getHashtagData()
 
@@ -1027,9 +1063,9 @@ if __name__ == "__main__":
     copyBrower()
     macAdr = get_mac_address()
     bResult, errCode, errMsg = check_version(macAdr[0], PGM_VERSION, getBrowserDir())
-    # bResult = True
-    # errCode = ERROR_NONE
-    # errMsg = 'Debug Mode'
+    bResult = True
+    errCode = ERROR_NONE
+    errMsg = 'Debug Mode'
     printLog(None, errMsg)
     if bResult:
         ui.setupUi(MainWindow)
