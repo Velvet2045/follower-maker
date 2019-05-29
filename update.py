@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import os, sys
 import time
 import re, requests
+from os.path import expanduser
 
 ERROR_NONE = 0
 ERROR_DRIVER = 1
@@ -264,38 +265,37 @@ def downlaod_updatefile(driverPath):
         errMsg = 'ensure chromedriver is installed at {}'.format(driverPath)
         return bResult, errCode, errMsg
 
-        url_update = 'https://antistereotypes.tistory.com/23'
-        driver.get(url_update)
+    url_update = 'https://antistereotypes.tistory.com/23'
+    driver.get(url_update)
+    time.sleep(3)
+
+    # div class: input - group
+    driver.find_element_by_xpath('//*[@id="entry23password"]').send_keys(UPDATE_PW)
+    driver.find_element_by_xpath('//*[@id="content"]/div[1]/div[2]/form/fieldset/button').click()
+
+    html = driver.page_source
+    soup = BeautifulSoup(html, 'html.parser')
+
+    strIniList = soup.find('div', {'class': 'entry-content'})
+
+    strUrl = ''
+    for ini in strIniList:
+        strIni = re.sub('<.+?>', '', str(ini))
+        if not strIni.find('PGM_UPDATE_URL') == -1:
+            strUrl = strIni[strIni.find('=')+1:]
+
+    if not strUrl == '':
+        file_id = strUrl
+        downloadedFile = ("%s\\Downloads\\followerMaker.zip") % expanduser("~")
+        download_file_from_google_drive(file_id, downloadedFile)
+
         time.sleep(3)
 
-        # div class: input - group
-        driver.find_element_by_xpath('//*[@id="entry23password"]').send_keys(UPDATE_PW)
-        driver.find_element_by_xpath('//*[@id="content"]/div[1]/div[2]/form/fieldset/button').click()
+    else:
+        bResult = False
+        errCode = ERROR_FAIL_TO_GET_URL
+        errMsg = '업데이트 URL이 없습니다. 관리자에게 문의해주세요.'
 
-        html = driver.page_source
-        soup = BeautifulSoup(html, 'html.parser')
-
-        strIniList = soup.find('div', {'class': 'entry-content'})
-
-        strUrl = ''
-        for ini in strIniList:
-            strIni = re.sub('<.+?>', '', str(ini))
-            if not strIni.find('PGM_UPDATE_URL') == -1:
-                strUrl = strIni[strIni.find('=')+1:]
-
-        if not strUrl == '':
-            file_id = strUrl
-            downloadedFile = ("%s\\Downloads\\followerMaker.zip") % expanduser("~")
-            download_file_from_google_drive(file_id, downloadedFile)
-
-            driver.get(strUrl)
-            time.sleep(3)
-
-        else:
-            bResult = False
-            errCode = ERROR_FAIL_TO_GET_URL
-            errMsg = '업데이트 URL이 없습니다. 관리자에게 문의해주세요.'
-
-        driver.quit()
+    driver.quit()
 
     return bResult, errCode, errMsg

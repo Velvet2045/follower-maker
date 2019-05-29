@@ -7,7 +7,7 @@ from socket import *
 import ctypes
 from os.path import expanduser
 
-PGM_VERSION = 0.4
+PGM_VERSION = 0.5
 
 ERROR_NONE = 0
 ERROR_DRIVER = 1
@@ -107,7 +107,6 @@ def check_version_counter(macId, curVer, driverPath):
             else:
                 printLog(None, errMsg)
 
-
 def getAccountData():
     if os.path.isfile('db/tbA.p'):
         with open('db/tbA.p', 'rb') as file:
@@ -167,6 +166,7 @@ class AccountDialog(QtWidgets.QDialog):
     def __init__(self):
         super().__init__()
         self.setupUi()
+        self.bSetAccount = False
 
     def setupUi(self):
         self.setObjectName("Dialog")
@@ -302,11 +302,11 @@ class AccountDialog(QtWidgets.QDialog):
 
     def btnDelClicked(self):
         self.delAccountLog()
-        selectedRow = self.tableWidget.currentIndex().row()
+        selectedRow = self.tableAccount.currentIndex().row()
         self.tableAccount.removeRow(selectedRow)
 
     def btnClearClicked(self):
-        rowCount = self.tableWidget.rowCount()
+        rowCount = self.tableAccount.rowCount()
         for row in reversed(range(rowCount)):
             self.tableAccount.removeRow(row)
 
@@ -508,6 +508,8 @@ class AccountDialog(QtWidgets.QDialog):
 
         with open('db/tbA.p', 'wb') as file:
             pickle.dump(accounts, file)
+
+        self.bSetAccount = True
 
     def delAccountLog(self):
         selectedRow = self.tableAccount.currentIndex().row()
@@ -994,7 +996,8 @@ class Ui_MainWindow(object):
     def btnSetAccountClicked(self):
         dlg = AccountDialog()
         dlg.exec_()
-        self.bSetAccount = True
+        if dlg.bSetAccount:
+            self.bSetAccount = True
 
     def btnSetHashtagClicked(self):
         dlg = HashtagDialog()
@@ -1012,37 +1015,38 @@ class Ui_MainWindow(object):
         self.bSetAccount = False
 
     def btnStartClicked(self):
-        if self.bSetAccount == False:
+        if not self.bSetAccount:
             self.btnSetAccountClicked()
-        
-        printLog(self.txtLog, "동작 시작")
-        accounts = getAccountData()
-        hashtags = getHashtagData()
 
-        if not accounts or not hashtags:
-            return
+        if self.bSetAccount:
+            printLog(self.txtLog, "동작 시작")
+            accounts = getAccountData()
+            hashtags = getHashtagData()
 
-        # call run.py
-        if not self.bRetryConnect:
-            SERVER_SOCK.bind(('', PORT))
-            self.bRetryConnect = True
-        SERVER_SOCK.listen(1)
+            if not accounts or not hashtags:
+                return
 
-        parser = threading.Thread(target=runInstaPy())
-        parser.daemon = True
-        parser.start()
+            # call run.py
+            if not self.bRetryConnect:
+                SERVER_SOCK.bind(('', PORT))
+                self.bRetryConnect = True
+            SERVER_SOCK.listen(1)
 
-        self.connectionSock, self.addr = SERVER_SOCK.accept()
-        printLog(self.txtLog, "[Server] 접속 완료")
+            parser = threading.Thread(target=runInstaPy())
+            parser.daemon = True
+            parser.start()
 
-        if self.chkHeadless.isChecked():
-            self.connectionSock.send('True'.encode('utf-8'))
-        else:
-            self.connectionSock.send('False'.encode('utf-8'))
+            self.connectionSock, self.addr = SERVER_SOCK.accept()
+            printLog(self.txtLog, "[Server] 접속 완료")
 
-        receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
-        receiver.daemon = True
-        receiver.start()
+            if self.chkHeadless.isChecked():
+                self.connectionSock.send('True'.encode('utf-8'))
+            else:
+                self.connectionSock.send('False'.encode('utf-8'))
+
+            receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
+            receiver.daemon = True
+            receiver.start()
 
     def btnStopClicked(self):
         printLog(self.txtLog, "좋아요/댓글/팔로우 중지")
