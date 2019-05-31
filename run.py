@@ -128,19 +128,58 @@ def startActivity(row=0,
                     s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개\n" % (session.liked_img,
                                                          session.commented, session.followed)
                     CLIENT_SOCKET.send(s.encode('utf-8'))
-
-            # unfollow if not follow me
-            # CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
-            # session.unfollow_users(amount=120, InstapyFollowed=(True, "nonfollowers"), style="FIFO",
-            #                       unfollow_after=90 * 60 * 60, sleep_delay=505)
-            # CLIENT_SOCKET.send("팔로워 정리 완료".encode('utf-8'))
         else:
                 CLIENT_SOCKET.send("좋아요 사용에 체크해주세요.".encode('utf-8'))
 
         instapy.InstaPy.end_sub(session)
+    except:
+        raise(CLIENT_SOCKET.send("세선 실행 에러 발생".encode('utf-8')))
+
+# unfollow1 InstaPy function..
+def unfollowActivity1(row=0,
+                  accounts=None,
+                  bHeadless=False):
+    id = str(accounts[row][TBL_ID])
+    pwd = str(accounts[row][TBL_PW])
+    session = instapy.InstaPy(username=id, password=pwd, headless_browser=bHeadless,
+                              show_logs=True)
+    session.login()
+    try:
+        # unfollow if not follow me
+        CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
+        session.unfollow_users(amount=120, nonFollowers=True, style="RANDOM",
+                               unfollow_after=90 * 60 * 60, sleep_delay=505)
+        s = "언팔로우: %d개\n" % (session.unfollowed)
+        CLIENT_SOCKET.send(s.encode('utf-8'))
+        CLIENT_SOCKET.send("팔로워 정리 완료".encode('utf-8'))
+
+        instapy.InstaPy.end_sub(session)
 
     except:
-        raise
+        raise(CLIENT_SOCKET.send("세션 실행 에러 발생".encode('utf-8')))
+
+# unfollow1 InstaPy function..
+def unfollowActivity2(row=0,
+                  accounts=None,
+                  bHeadless=False):
+    id = str(accounts[row][TBL_ID])
+    pwd = str(accounts[row][TBL_PW])
+    session = instapy.InstaPy(username=id, password=pwd, headless_browser=bHeadless,
+                              show_logs=True)
+    session.login()
+    try:
+        # unfollow if not follow me
+        CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
+        session.unfollow_users(amount=120, allFollowing=True, style="RANDOM",
+                               unfollow_after=90 * 60 * 60, sleep_delay=505)
+        s = "언팔로우: %d개\n" % (session.unfollowed)
+        CLIENT_SOCKET.send(s.encode('utf-8'))
+        CLIENT_SOCKET.send("팔로워 정리 완료".encode('utf-8'))
+
+        instapy.InstaPy.end_sub(session)
+
+    except:
+        raise(CLIENT_SOCKET.send("세션 실행 에러 발생".encode('utf-8')))
 
 def getAccountData():
     if os.path.isfile('db/tbA.p'):
@@ -178,6 +217,15 @@ def getFilterData():
 
     return filters
 
+def getUnfollowData():
+    if os.path.isfile('db/tbU.p'):
+        with open('db/tbU.p', 'rb') as file:
+            mode = pickle.load(file)
+    else:
+        mode = 0
+
+    return mode
+
 if __name__ == "__main__":
     CLIENT_SOCKET.connect(('127.0.0.1', PORT))
     CLIENT_SOCKET.send("접속 완료".encode('utf-8'))
@@ -195,7 +243,14 @@ if __name__ == "__main__":
     threads = []
     for row in range(0, len(accounts)):
         if accounts[row][TBL_USE_ACCOUNT]:
-            t = StoppableThread(startActivity, (row, accounts, hashtags, comments, filters, bHeadless,))
+            mode = getUnfollowData()
+            if mode == 0:
+                t = StoppableThread(startActivity, (row, accounts, hashtags, comments, filters, bHeadless,))
+            elif mode == 1:
+                t = StoppableThread(unfollowActivity1, (row, accounts, bHeadless,))
+            elif mode == 2:
+                t = StoppableThread(unfollowActivity2, (row, accounts, bHeadless,))
+
             threads.append(t)
 
     for t in threads:

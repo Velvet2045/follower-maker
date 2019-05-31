@@ -143,6 +143,10 @@ def getFilterData():
 
     return filters
 
+def setUnfollowData(mode):
+    with open('db/tbU.p', 'wb') as file:
+        pickle.dump(mode, file)
+
 class StoppableThread(threading.Thread):
     """Thread class with a stop() method. The thread itself has to check
     regularly for the stopped() condition."""
@@ -910,17 +914,17 @@ class Ui_MainWindow(object):
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(920, 369)
+        MainWindow.resize(920, 416)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.grpLog = QtWidgets.QGroupBox(self.centralwidget)
-        self.grpLog.setGeometry(QtCore.QRect(10, 100, 891, 231))
+        self.grpLog.setGeometry(QtCore.QRect(10, 160, 891, 231))
         self.grpLog.setObjectName("grpLog")
         self.txtLog = QtWidgets.QTextBrowser(self.grpLog)
         self.txtLog.setGeometry(QtCore.QRect(20, 30, 851, 181))
         self.txtLog.setObjectName("txtLog")
         self.horizontalLayoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
-        self.horizontalLayoutWidget_2.setGeometry(QtCore.QRect(10, 10, 893, 80))
+        self.horizontalLayoutWidget_2.setGeometry(QtCore.QRect(10, 10, 893, 61))
         self.horizontalLayoutWidget_2.setObjectName("horizontalLayoutWidget_2")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget_2)
         self.horizontalLayout_2.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
@@ -938,15 +942,27 @@ class Ui_MainWindow(object):
         self.btnSetFilter = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
         self.btnSetFilter.setObjectName("btnSetFilter")
         self.horizontalLayout_2.addWidget(self.btnSetFilter)
-        self.btnStart = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
-        self.btnStart.setObjectName("btnStart")
-        self.horizontalLayout_2.addWidget(self.btnStart)
-        self.btnStop = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
-        self.btnStop.setObjectName("btnStop")
-        self.horizontalLayout_2.addWidget(self.btnStop)
         self.chkHeadless = QtWidgets.QCheckBox(self.horizontalLayoutWidget_2)
-        self.chkHeadless.setObjectName("chkHeadless")
+        self.chkHeadless.setObjectName("chkHideChrome")
         self.horizontalLayout_2.addWidget(self.chkHeadless)
+        self.horizontalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
+        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(10, 90, 711, 51))
+        self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.btnUnfollow1 = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        self.btnUnfollow1.setObjectName("btnUnfollow1")
+        self.horizontalLayout.addWidget(self.btnUnfollow1)
+        self.btnUnfollow2 = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        self.btnUnfollow2.setObjectName("btnUnfollow2")
+        self.horizontalLayout.addWidget(self.btnUnfollow2)
+        self.btnStart = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        self.btnStart.setObjectName("btnStart")
+        self.horizontalLayout.addWidget(self.btnStart)
+        self.btnStop = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        self.btnStop.setObjectName("btnStop")
+        self.horizontalLayout.addWidget(self.btnStop)
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -960,6 +976,10 @@ class Ui_MainWindow(object):
         self.btnSetComment.setIcon(QtGui.QIcon('icon/comments.svg'))
         self.btnSetFilter.clicked.connect(self.btnSetFilterClicked)
         self.btnSetFilter.setIcon(QtGui.QIcon('icon/like-ban.svg'))
+        self.btnUnfollow1.clicked.connect(self.btnUnfollow1Clicked)
+        self.btnUnfollow1.setIcon(QtGui.QIcon('icon/user-ban.svg'))
+        self.btnUnfollow2.clicked.connect(self.btnUnfollow2Clicked)
+        self.btnUnfollow2.setIcon(QtGui.QIcon('icon/user-ban.svg'))
         self.btnStart.clicked.connect(self.btnStartClicked)
         self.btnStart.setIcon(QtGui.QIcon('icon/start.png'))
         self.btnStop.clicked.connect(self.btnStopClicked)
@@ -989,6 +1009,8 @@ class Ui_MainWindow(object):
         self.btnSetHashtag.setText(_translate("MainWindow", "태그 설정"))
         self.btnSetComment.setText(_translate("MainWindow", "댓글 설정"))
         self.btnSetFilter.setText(_translate("MainWindow", "필터 설정"))
+        self.btnUnfollow1.setText(_translate("MainWindow", "맞팔 언팔"))
+        self.btnUnfollow2.setText(_translate("MainWindow", "전부 언팔"))
         self.btnStart.setText(_translate("MainWindow", "동작 시작"))
         self.btnStop.setText(_translate("MainWindow", "동작 중지"))
         self.chkHeadless.setText(_translate("MainWindow", "창 숨기기"))
@@ -1018,12 +1040,81 @@ class Ui_MainWindow(object):
         if not self.bSetAccount:
             self.btnSetAccountClicked()
 
+        setUnfollowData(0)
         if self.bSetAccount:
             printLog(self.txtLog, "동작 시작")
             accounts = getAccountData()
             hashtags = getHashtagData()
 
             if not accounts or not hashtags:
+                return
+
+            # call run.py
+            if not self.bRetryConnect:
+                SERVER_SOCK.bind(('', PORT))
+                self.bRetryConnect = True
+            SERVER_SOCK.listen(1)
+
+            parser = threading.Thread(target=runInstaPy())
+            parser.daemon = True
+            parser.start()
+
+            self.connectionSock, self.addr = SERVER_SOCK.accept()
+            printLog(self.txtLog, "[Server] 접속 완료")
+
+            if self.chkHeadless.isChecked():
+                self.connectionSock.send('True'.encode('utf-8'))
+            else:
+                self.connectionSock.send('False'.encode('utf-8'))
+
+            receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
+            receiver.daemon = True
+            receiver.start()
+
+    def btnUnfollow1Clicked(self):
+        if not self.bSetAccount:
+            self.btnSetAccountClicked()
+
+        setUnfollowData(1)
+        if self.bSetAccount:
+            printLog(self.txtLog, "언팔로우 시작")
+            accounts = getAccountData()
+
+            if not accounts:
+                return
+
+            # call run.py
+            if not self.bRetryConnect:
+                SERVER_SOCK.bind(('', PORT))
+                self.bRetryConnect = True
+            SERVER_SOCK.listen(1)
+
+            # parser = threading.Thread(target=runInstaPy())
+            # parser.daemon = True
+            # parser.start()
+
+            self.connectionSock, self.addr = SERVER_SOCK.accept()
+            printLog(self.txtLog, "[Server] 접속 완료")
+
+            if self.chkHeadless.isChecked():
+                self.connectionSock.send('True'.encode('utf-8'))
+            else:
+                self.connectionSock.send('False'.encode('utf-8'))
+
+            receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
+            receiver.daemon = True
+            receiver.start()
+
+    def btnUnfollow2Clicked(self):
+        if not self.bSetAccount:
+            self.btnSetAccountClicked()
+
+        setUnfollowData(2)
+        if self.bSetAccount:
+            printLog(self.txtLog, "언팔로우 시작")
+            accounts = getAccountData()
+
+            if not accounts:
                 return
 
             # call run.py

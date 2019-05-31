@@ -20,7 +20,7 @@ def run_follower_maker(path):
 if __name__ == "__main__":
     downloadedFile = ("%s\\Downloads\\followerMaker.zip") % expanduser("~")
 
-    if isfile(downloadedFile) and False:
+    if isfile(downloadedFile):
         folder = getcwd()
         upperFolder = folder[:folder.rfind('\\')]
 
