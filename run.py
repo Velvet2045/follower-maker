@@ -48,6 +48,9 @@ def receive(sock):
         s = "[Server] %s" % command
         print(s)
     sock.close()
+    # import subprocess
+    # CREATE_NO_WINDOW = 0x08000000
+    # subprocess.call('taskkill /F /IM chromedriver.exe', creationflags=CREATE_NO_WINDOW)
     sys.exit()
 
 # run InstaPy function..

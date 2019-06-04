@@ -7,7 +7,7 @@ from socket import *
 import ctypes
 from os.path import expanduser
 
-PGM_VERSION = 0.5
+PGM_VERSION = 1.0
 
 ERROR_NONE = 0
 ERROR_DRIVER = 1
