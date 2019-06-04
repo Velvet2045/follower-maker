@@ -924,15 +924,15 @@ class Ui_MainWindow(object):
         self.txtLog.setGeometry(QtCore.QRect(20, 30, 851, 181))
         self.txtLog.setObjectName("txtLog")
         self.horizontalLayoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
-        self.horizontalLayoutWidget_2.setGeometry(QtCore.QRect(10, 10, 893, 61))
+        self.horizontalLayoutWidget_2.setGeometry(QtCore.QRect(10, 10, 711, 61))
         self.horizontalLayoutWidget_2.setObjectName("horizontalLayoutWidget_2")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget_2)
         self.horizontalLayout_2.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.btnSetAccount = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
-        self.btnSetAccount.setObjectName("btnSetAccount")
-        self.horizontalLayout_2.addWidget(self.btnSetAccount)
+        # self.btnSetAccount = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
+        # self.btnSetAccount.setObjectName("btnSetAccount")
+        # self.horizontalLayout_2.addWidget(self.btnSetAccount)
         self.btnSetHashtag = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
         self.btnSetHashtag.setObjectName("btnSetHashtag")
         self.horizontalLayout_2.addWidget(self.btnSetHashtag)
@@ -943,7 +943,7 @@ class Ui_MainWindow(object):
         self.btnSetFilter.setObjectName("btnSetFilter")
         self.horizontalLayout_2.addWidget(self.btnSetFilter)
         self.chkHeadless = QtWidgets.QCheckBox(self.horizontalLayoutWidget_2)
-        self.chkHeadless.setObjectName("chkHideChrome")
+        self.chkHeadless.setObjectName("chkHeadless")
         self.horizontalLayout_2.addWidget(self.chkHeadless)
         self.horizontalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
         self.horizontalLayoutWidget.setGeometry(QtCore.QRect(10, 90, 711, 51))
@@ -968,8 +968,8 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
-        self.btnSetAccount.clicked.connect(self.btnSetAccountClicked)
-        self.btnSetAccount.setIcon(QtGui.QIcon('icon/info.png'))
+        # self.btnSetAccount.clicked.connect(self.btnSetAccountClicked)
+        # self.btnSetAccount.setIcon(QtGui.QIcon('icon/info.png'))
         self.btnSetHashtag.clicked.connect(self.btnSetHashtagClicked)
         self.btnSetHashtag.setIcon(QtGui.QIcon('icon/hashtag.png'))
         self.btnSetComment.clicked.connect(self.btnSetCommentClicked)
@@ -991,6 +991,7 @@ class Ui_MainWindow(object):
         self.threads = []
         self.bRetryConnect = False
         self.bSetAccount = False
+        self.bRunState = False
 
         printLog(self.txtLog, "프로그램 시작")
 
@@ -1005,7 +1006,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", wndTitle))
         MainWindow.setWindowIcon(QtGui.QIcon('icon/instagram.png'))
         self.grpLog.setTitle(_translate("MainWindow", "로그"))
-        self.btnSetAccount.setText(_translate("MainWindow", "계정 설정"))
+        # self.btnSetAccount.setText(_translate("MainWindow", "계정 설정"))
         self.btnSetHashtag.setText(_translate("MainWindow", "태그 설정"))
         self.btnSetComment.setText(_translate("MainWindow", "댓글 설정"))
         self.btnSetFilter.setText(_translate("MainWindow", "필터 설정"))
@@ -1070,6 +1071,8 @@ class Ui_MainWindow(object):
             receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
             receiver.daemon = True
             receiver.start()
+            self.bRunState = True
+            self.bSetAccount = False
 
     def btnUnfollow1Clicked(self):
         if not self.bSetAccount:
@@ -1104,6 +1107,8 @@ class Ui_MainWindow(object):
             receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
             receiver.daemon = True
             receiver.start()
+            self.bRunState = True
+            self.bSetAccount = False
 
     def btnUnfollow2Clicked(self):
         if not self.bSetAccount:
@@ -1138,10 +1143,14 @@ class Ui_MainWindow(object):
             receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
             receiver.daemon = True
             receiver.start()
+            self.bRunState = True
+            self.bSetAccount = False
 
     def btnStopClicked(self):
-        printLog(self.txtLog, "좋아요/댓글/팔로우 중지")
-        self.connectionSock.send('Terminate'.encode('utf-8'))
+        if self.bRunState:
+            printLog(self.txtLog, "좋아요/댓글/팔로우 중지")
+            self.connectionSock.send('Terminate'.encode('utf-8'))
+            self.bRunState = False
 
     def btnNoticeClicked(self):
         bResult, errCode, errMsg = get_notification(getBrowserDir())
