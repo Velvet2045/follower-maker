@@ -343,8 +343,6 @@ class AccountDialog(QtWidgets.QDialog):
 
         accounts = None
         rowCount = 1
-        if not os.path.isdir('db'):
-            os.makedirs('db')
         if os.path.isfile('db/tbA.p'):
             with open('db/tbA.p', 'rb') as file:
                 accounts = pickle.load(file)
@@ -1000,6 +998,9 @@ class Ui_MainWindow(object):
         version_checker.daemon = True
         version_checker.start()
 
+        if not os.path.isdir('db'):
+            os.makedirs('db')
+
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         wndTitle = "Follower Maker v%.1f" % PGM_VERSION
@@ -1092,9 +1093,9 @@ class Ui_MainWindow(object):
                 self.bRetryConnect = True
             SERVER_SOCK.listen(1)
 
-            # parser = threading.Thread(target=runInstaPy())
-            # parser.daemon = True
-            # parser.start()
+            parser = threading.Thread(target=runInstaPy())
+            parser.daemon = True
+            parser.start()
 
             self.connectionSock, self.addr = SERVER_SOCK.accept()
             printLog(self.txtLog, "[Server] 접속 완료")
