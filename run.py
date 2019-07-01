@@ -70,10 +70,10 @@ def startActivity(row=0,
                                      sleep_after=["likes", "comments", "follows", "unfollows",
                                                   "server_calls_h"], sleepyhead=True, stochastic_flow=True,
                                      notify_me=True,
-                                     peak_likes=(120, 1020),
-                                     peak_comments=(120, 1020),
-                                     peak_follows=(120, 1020),
-                                     peak_unfollows=(120, 1020),
+                                     peak_likes=(91, 921),
+                                     peak_comments=(72, 722),
+                                     peak_follows=(53, 523),
+                                     peak_unfollows=(54, 524),
                                      peak_server_calls=(None, 4700))
 
         session.set_skip_users(skip_private=True, private_percentage=100)
@@ -90,7 +90,7 @@ def startActivity(row=0,
                 if not comment == 'None':
                     valComments.append(comment)
             if valComments:
-                session.set_do_comment(enabled=True, percentage=50)
+                session.set_do_comment(enabled=True, percentage=75)
                 session.set_comments(valComments)
 
         if accounts[row][TBL_USE_FILTER] and filters:
@@ -113,7 +113,7 @@ def startActivity(row=0,
                     valHashtags.append(hashtag)
             if valHashtags and accounts[row][TBL_USE_LIKE]:
                 if accounts[row][TBL_USE_FOLLOW]:
-                    session.set_do_follow(enabled=True, percentage=50)
+                    session.set_do_follow(enabled=True, percentage=75)
                     CLIENT_SOCKET.send("좋아요/댓글/팔로우 실행".encode('utf-8'))
                 for cnt in range(0, int(accounts[row][TBL_REPEAT_CNT])):
                     session.like_by_tags(tags=valHashtags, amount=int(accounts[row][TBL_TAG_SHIFT]),
@@ -134,6 +134,7 @@ def startActivity(row=0,
         else:
                 CLIENT_SOCKET.send("좋아요 사용에 체크해주세요.".encode('utf-8'))
 
+        session.like_by
         instapy.InstaPy.end_sub(session)
     except:
         raise(CLIENT_SOCKET.send("세선 실행 에러 발생".encode('utf-8')))
@@ -151,7 +152,7 @@ def unfollowActivity1(row=0,
         # unfollow if not follow me
         CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
         session.unfollow_users(amount=120, nonFollowers=True, style="RANDOM",
-                               unfollow_after=90 * 60 * 60, sleep_delay=505)
+                               unfollow_after=1 * 60 * 60, sleep_delay=100)
         s = "언팔로우: %d개\n" % (session.unfollowed)
         CLIENT_SOCKET.send(s.encode('utf-8'))
         CLIENT_SOCKET.send("팔로워 정리 완료".encode('utf-8'))
@@ -174,7 +175,7 @@ def unfollowActivity2(row=0,
         # unfollow if not follow me
         CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
         session.unfollow_users(amount=120, allFollowing=True, style="RANDOM",
-                               unfollow_after=90 * 60 * 60, sleep_delay=505)
+                               unfollow_after=1 * 60 * 60, sleep_delay=100)
         s = "언팔로우: %d개\n" % (session.unfollowed)
         CLIENT_SOCKET.send(s.encode('utf-8'))
         CLIENT_SOCKET.send("팔로워 정리 완료".encode('utf-8'))

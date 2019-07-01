@@ -7,7 +7,7 @@ from socket import *
 import ctypes
 from os.path import expanduser
 
-PGM_VERSION = 1.0
+PGM_VERSION = 1.1
 
 ERROR_NONE = 0
 ERROR_DRIVER = 1
@@ -79,33 +79,38 @@ def runInstaller():
     else:
         print('fail to run installer: {}'.format(file))
 
+def runProcessKiller():
+    file = "{}\\ProgramInstaller.exe".format(os.getcwd())
+
+    if os.path.isfile(file):
+        print('run ProgramInstaller: {}'.format(file))
+        os.popen(file)
+    else:
+        print('fail to run installer: {}'.format(file))
+
 def check_version_counter(macId, curVer, driverPath):
-    bResult = True
-    errCode = ERROR_NONE
-    errMsg = ''
-    while bResult:
-        time.sleep(24 * 60 * 60)
+    bRunning = True
+    while bRunning:
+        time.sleep(6 * 60 * 60)
+        # errCode = ERROR_UNIDENTIFIED_USER
         bResult, errCode, errMsg = check_version(macId, curVer, driverPath)
+        if errCode == ERROR_UNIDENTIFIED_USER:
+            bRunning = False
 
-    if errCode == ERROR_UNIDENTIFIED_USER:
-        msg = ctypes.windll.user32.MessageBoxW(None, "프로그램 사용 신청을 하시겠습니까?", "Follow Maker Noti", 4)
-        if msg == 6:
-            bResult, errCode, errMsg = apply_use(macAdr[0], getBrowserDir())
-            printLog(None, errMsg)
+        elif errCode == ERROR_OLD_VERSION:
+            msg = ctypes.windll.user32.MessageBoxW(None, "프로그램을 업데이트 하시겠습니까?", "Follow Maker Noti", 4)
+            if msg == 6:
+                bResult, errCode, errMsg = downlaod_updatefile(getBrowserDir())
+                if bResult:
+                    installer = threading.Thread(target=runInstaller())
+                    installer.start()
+                    bRunning = False
 
-        sys.exit()
+                else:
+                    printLog(None, errMsg)
 
-    elif errCode == ERROR_OLD_VERSION:
-        msg = ctypes.windll.user32.MessageBoxW(None, "프로그램을 업데이트 하시겠습니까?", "Follow Maker Noti", 4)
-        if msg == 6:
-            bResult, errCode, errMsg = downlaod_updatefile(getBrowserDir())
-            if bResult:
-                printLog(None, "업데이트를 위해 프로그램을 종료합니다.")
-                installer = threading.Thread(target=runInstaller())
-                installer.start()
-                sys.exit()
-            else:
-                printLog(None, errMsg)
+    processKiller = threading.Thread(target=runProcessKiller())
+    processKiller.start()
 
 def getAccountData():
     if os.path.isfile('db/tbA.p'):
@@ -1170,7 +1175,7 @@ if __name__ == "__main__":
     # bResult = True
     # errCode = ERROR_NONE
     # errMsg = 'Debug Mode'
-    printLog(None, errMsg)
+    # printLog(None, errMsg)
     if bResult:
         ui.setupUi(MainWindow)
         MainWindow.show()
