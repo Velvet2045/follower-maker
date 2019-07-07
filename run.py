@@ -15,7 +15,8 @@ TBL_COMMENTS = 8
 TBL_FILTERS = 9
 TBL_REPEAT_CNT = 10
 TBL_TAG_SHIFT = 11
-TBL_MAX = 12
+TBL_SPEED = 12
+TBL_MAX = 13
 
 PORT = 8081
 CLIENT_SOCKET = socket(AF_INET, SOCK_STREAM)
@@ -66,14 +67,15 @@ def startActivity(row=0,
                               show_logs=True)
     session.login()
     try:
+        speed = int(accounts[row][TBL_SPEED])
         session.set_quota_supervisor(enabled=True,
                                      sleep_after=["likes", "comments", "follows", "unfollows",
                                                   "server_calls_h"], sleepyhead=True, stochastic_flow=True,
                                      notify_me=True,
-                                     peak_likes=(91, 921),
-                                     peak_comments=(72, 722),
-                                     peak_follows=(53, 523),
-                                     peak_unfollows=(54, 524),
+                                     peak_likes=(21+4*speed, 500+100*speed),
+                                     peak_comments=(16+4*speed, 375+80*speed),
+                                     peak_follows=(16+4*speed, 375+80*speed),
+                                     peak_unfollows=(16+4*speed, 375+80*speed),
                                      peak_server_calls=(None, 4700))
 
         session.set_skip_users(skip_private=True, private_percentage=100)
@@ -134,7 +136,6 @@ def startActivity(row=0,
         else:
                 CLIENT_SOCKET.send("좋아요 사용에 체크해주세요.".encode('utf-8'))
 
-        session.like_by
         instapy.InstaPy.end_sub(session)
     except:
         raise(CLIENT_SOCKET.send("세선 실행 에러 발생".encode('utf-8')))

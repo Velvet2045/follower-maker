@@ -7,7 +7,7 @@ from socket import *
 import ctypes
 from os.path import expanduser
 
-PGM_VERSION = 1.1
+PGM_VERSION = 1.2
 
 ERROR_NONE = 0
 ERROR_DRIVER = 1
@@ -28,7 +28,8 @@ TBL_COMMENTS = 8
 TBL_FILTERS = 9
 TBL_REPEAT_CNT = 10
 TBL_TAG_SHIFT = 11
-TBL_MAX = 12
+TBL_SPEED = 12
+TBL_MAX = 13
 
 PORT = 8081
 SERVER_SOCK = socket(AF_INET, SOCK_STREAM)
@@ -86,7 +87,16 @@ def runProcessKiller():
         print('run ProgramInstaller: {}'.format(file))
         os.popen(file)
     else:
-        print('fail to run installer: {}'.format(file))
+        print('fail to run ProgramInstaller: {}'.format(file))
+
+def runChromeKiller():
+    file = "{}\\ChromeCloser.exe".format(os.getcwd())
+
+    if os.path.isfile(file):
+        print('run runChromeKiller: {}'.format(file))
+        os.popen(file)
+    else:
+        print('fail to run runChromeKiller: {}'.format(file))
 
 def check_version_counter(macId, curVer, driverPath):
     bRunning = True
@@ -324,14 +334,15 @@ class AccountDialog(QtWidgets.QDialog):
         self.tableAccount.setSelectionMode(1)
 
         # set rows, columns
-        self.tableAccount.setColumnCount(12)
+        self.tableAccount.setColumnCount(TBL_MAX)
         self.tableAccount.setRowCount(1)
 
         # set column header
         self.tableAccount.setHorizontalHeaderLabels(['계정 사용', '아이디', '비밀번호',
                                                      '좋아요 사용', '팔로우 사용', '댓글 사용',
                                                      '필터링 사용', '태그 그룹', '댓글 그룹',
-                                                     '필터 목록', '총 반복 수', '태그 당 횟수'])
+                                                     '필터 목록', '총 반복 수', '태그 당 횟수',
+                                                     '동작 속도'])
         self.tableAccount.horizontalHeaderItem(0).setToolTip('사용여부...')
         self.tableAccount.setColumnWidth(TBL_USE_ACCOUNT, 120)
         self.tableAccount.setColumnWidth(TBL_ID, 120)
@@ -345,6 +356,7 @@ class AccountDialog(QtWidgets.QDialog):
         self.tableAccount.setColumnWidth(TBL_FILTERS, 120)
         self.tableAccount.setColumnWidth(TBL_REPEAT_CNT, 120)
         self.tableAccount.setColumnWidth(TBL_TAG_SHIFT, 120)
+        self.tableAccount.setColumnWidth(TBL_SPEED, 120)
 
         accounts = None
         rowCount = 1
@@ -449,6 +461,16 @@ class AccountDialog(QtWidgets.QDialog):
                 txtTagShift = QtWidgets.QTableWidgetItem(accounts[row][TBL_TAG_SHIFT])
             self.tableAccount.setItem(row, TBL_TAG_SHIFT, txtTagShift)
 
+            cmbSpeed = QtWidgets.QComboBox()
+            cmbSpeed.addItem('많이느림')
+            cmbSpeed.addItem('조금느림')
+            cmbSpeed.addItem('조금빠름')
+            cmbSpeed.addItem('많이빠름')
+            cmbSpeed.addItem('완전빠름')
+            if accounts:
+                cmbSpeed.setCurrentIndex(int(accounts[row][TBL_SPEED]))
+            self.tableAccount.setCellWidget(row, TBL_SPEED, cmbSpeed)
+
     def loadPickleData(self):
         rowCount = self.tableAccount.rowCount()
         hashtags = getHashtagData()
@@ -508,10 +530,14 @@ class AccountDialog(QtWidgets.QDialog):
                     accounts[row].append(cmbBox2.currentIndex())
 
             for col in range(TBL_REPEAT_CNT, TBL_TAG_SHIFT + 1):
-                value = 'None'
+                value = '1'
                 if self.tableAccount.item(row, col):
                     value = self.tableAccount.item(row, col).text()
                 accounts[row].append(value)
+
+            cmbSpeed = self.tableAccount.cellWidget(row, TBL_SPEED)
+            if isinstance(cmbSpeed, QtWidgets.QComboBox):
+                accounts[row].append(cmbSpeed.currentIndex())
 
         with open('db/tbA.p', 'wb') as file:
             pickle.dump(accounts, file)
@@ -1157,6 +1183,8 @@ class Ui_MainWindow(object):
             printLog(self.txtLog, "좋아요/댓글/팔로우 중지")
             self.connectionSock.send('Terminate'.encode('utf-8'))
             self.bRunState = False
+            # chromeKiller = threading.Thread(target=runChromeKiller())
+            # chromeKiller.start()
 
     def btnNoticeClicked(self):
         bResult, errCode, errMsg = get_notification(getBrowserDir())
@@ -1175,7 +1203,7 @@ if __name__ == "__main__":
     # bResult = True
     # errCode = ERROR_NONE
     # errMsg = 'Debug Mode'
-    # printLog(None, errMsg)
+    printLog(None, errMsg)
     if bResult:
         ui.setupUi(MainWindow)
         MainWindow.show()
