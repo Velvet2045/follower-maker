@@ -54,7 +54,8 @@ def check_version(macId, curVer, driverPath):
         strCode = strIni[strIni.find('=') + 1:]
         if strCode.find(macId) != -1:
             bIncluded = True
-            errMsg = '환영합니다! {}님 :)'.format(strIni[:strIni.find('=')])
+            errMsg = '환영합니다! 고객님 :)'
+            # ,format(strIni[:strIni.find('=')])
             break
 
     if bIncluded:

@@ -7,7 +7,7 @@ from socket import *
 import ctypes
 from os.path import expanduser
 
-PGM_VERSION = 1.3
+PGM_VERSION = 1.4
 
 ERROR_NONE = 0
 ERROR_DRIVER = 1
@@ -238,6 +238,7 @@ class AccountDialog(QtWidgets.QDialog):
         self.btnCancel.setGeometry(QtCore.QRect(610, 340, 112, 34))
         self.btnCancel.setObjectName("btnCancel")
         self.btnCancel.clicked.connect(self.btnCancelClicked)
+
         self.retranslateUi()
         QtCore.QMetaObject.connectSlotsByName(self)
 
@@ -360,7 +361,6 @@ class AccountDialog(QtWidgets.QDialog):
         self.tableAccount.setItem(rowCount, TBL_TAG_SHIFT, txtTagShift)
 
     def btnDelClicked(self):
-        self.delAccountLog()
         selectedRow = self.tableAccount.currentIndex().row()
         self.tableAccount.removeRow(selectedRow)
 
@@ -502,11 +502,11 @@ class AccountDialog(QtWidgets.QDialog):
             self.tableAccount.setItem(row, TBL_TAG_SHIFT, txtTagShift)
 
             cmbSpeed = QtWidgets.QComboBox()
-            cmbSpeed.addItem('많이느림')
-            cmbSpeed.addItem('조금느림')
-            cmbSpeed.addItem('조금빠름')
-            cmbSpeed.addItem('많이빠름')
-            cmbSpeed.addItem('완전빠름')
+            cmbSpeed.addItem('0')
+            cmbSpeed.addItem('1')
+            cmbSpeed.addItem('2')
+            cmbSpeed.addItem('3')
+            cmbSpeed.addItem('4')
             if accounts:
                 cmbSpeed.setCurrentIndex(int(accounts[row][TBL_SPEED]))
             self.tableAccount.setCellWidget(row, TBL_SPEED, cmbSpeed)
@@ -1048,6 +1048,7 @@ class Ui_MainWindow(object):
         self.bRunState = False
 
         printLog(self.txtLog, "프로그램 시작")
+        self.btnStop.setEnabled(False)
 
         macAdr = get_mac_address()
         version_checker = StoppableThread(check_version_counter, (macAdr[0], PGM_VERSION, getBrowserDir()))
@@ -1087,6 +1088,12 @@ class Ui_MainWindow(object):
         self.bSetAccount = False
 
     def btnStartClicked(self):
+        self.btnSetHashtag.setEnabled(False)
+        self.btnSetComment.setEnabled(False)
+        self.btnSetFilter.setEnabled(False)
+        self.btnStart.setEnabled(False)
+        self.btnStop.setEnabled(True)
+        self.bSetAccount = False
         dlg = AccountDialog()
         dlg.exec_()
         if dlg.bSetAccount:
@@ -1122,12 +1129,16 @@ class Ui_MainWindow(object):
             receiver.daemon = True
             receiver.start()
             self.bRunState = True
-            self.bSetAccount = False
 
 
     def btnStopClicked(self):
+        self.btnSetHashtag.setEnabled(True)
+        self.btnSetComment.setEnabled(True)
+        self.btnSetFilter.setEnabled(True)
+        self.btnStart.setEnabled(True)
+        self.btnStop.setEnabled(False)
         if self.bRunState:
-            printLog(self.txtLog, "좋아요/댓글/팔로우 중지")
+            printLog(self.txtLog, "동작 중지")
             self.connectionSock.send('Terminate'.encode('utf-8'))
             self.bRunState = False
             # chromeKiller = threading.Thread(target=runChromeKiller())
@@ -1137,6 +1148,8 @@ class Ui_MainWindow(object):
         bResult, errCode, errMsg = get_notification(getBrowserDir())
         if bResult:
             printLog(None, errMsg)
+
+
 
 
 if __name__ == "__main__":
