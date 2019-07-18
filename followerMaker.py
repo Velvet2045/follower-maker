@@ -7,7 +7,7 @@ from socket import *
 import ctypes
 from os.path import expanduser
 
-PGM_VERSION = 1.2
+PGM_VERSION = 1.3
 
 ERROR_NONE = 0
 ERROR_DRIVER = 1
@@ -31,6 +31,11 @@ TBL_TAG_SHIFT = 11
 TBL_SPEED = 12
 TBL_MAX = 13
 
+MODE_TAGRUN = 0
+MODE_IDRUN = 1
+MODE_UNFOLLOW1 = 2
+MODE_UNFOLLOW2 = 3
+
 PORT = 8081
 SERVER_SOCK = socket(AF_INET, SOCK_STREAM)
 
@@ -53,10 +58,10 @@ def printLog(txtView, log):
         msg = ctypes.windll.user32.MessageBoxW(None, str(log), "Follow Maker Noti", 0)
 
 def getBrowserDir():
-    return ("%s/InstaPy/assets/chromedriver.exe") % expanduser("~")
+    return ("%s\\InstaPy\\assets\\chromedriver.exe") % expanduser("~")
 
 def copyBrower():
-    pastePath = "{}/InstaPy/assets".format(expanduser("~"))
+    pastePath = "{}\\InstaPy\\assets".format(expanduser("~"))
     if not os.path.isdir(pastePath):
         os.makedirs(os.path.join(pastePath))
     if not os.path.isfile(getBrowserDir()):
@@ -158,7 +163,7 @@ def getFilterData():
 
     return filters
 
-def setUnfollowData(mode):
+def setMode(mode):
     with open('db/tbU.p', 'wb') as file:
         pickle.dump(mode, file)
 
@@ -213,10 +218,22 @@ class AccountDialog(QtWidgets.QDialog):
         self.btnClear.setObjectName("btnClear")
         self.horizontalLayout.addWidget(self.btnClear)
         self.btnClear.clicked.connect(self.btnClearClicked)
-        self.btnSave = QtWidgets.QPushButton(self)
-        self.btnSave.setGeometry(QtCore.QRect(490, 340, 112, 34))
-        self.btnSave.setObjectName("btnSave")
-        self.btnSave.clicked.connect(self.btnSaveClicked)
+        self.btnTagRun = QtWidgets.QPushButton(self)
+        self.btnTagRun.setGeometry(QtCore.QRect(30, 340, 162, 34))
+        self.btnTagRun.setObjectName("btnTagRun")
+        self.btnTagRun.clicked.connect(self.btnTagRunClicked)
+        self.btnIdRun = QtWidgets.QPushButton(self)
+        self.btnIdRun.setGeometry(QtCore.QRect(200, 340, 162, 34))
+        self.btnIdRun.setObjectName("btnIdRun")
+        self.btnIdRun.clicked.connect(self.btnIdRunClicked)
+        self.btnUnfollow1 = QtWidgets.QPushButton(self)
+        self.btnUnfollow1.setGeometry(QtCore.QRect(370, 340, 112, 34))
+        self.btnUnfollow1.setObjectName("btnUnfollow1")
+        self.btnUnfollow1.clicked.connect(self.btnUnfollow1Clicked)
+        self.btnUnfollow2 = QtWidgets.QPushButton(self)
+        self.btnUnfollow2.setGeometry(QtCore.QRect(490, 340, 112, 34))
+        self.btnUnfollow2.setObjectName("btnUnfollow2")
+        self.btnUnfollow2.clicked.connect(self.btnUnfollow2Clicked)
         self.btnCancel = QtWidgets.QPushButton(self)
         self.btnCancel.setGeometry(QtCore.QRect(610, 340, 112, 34))
         self.btnCancel.setObjectName("btnCancel")
@@ -234,11 +251,34 @@ class AccountDialog(QtWidgets.QDialog):
         self.btnAdd.setText(_translate("Dialog", "그룹 추가"))
         self.btnDel.setText(_translate("Dialog", "선택 삭제"))
         self.btnClear.setText(_translate("Dialog", "모두 삭제"))
-        self.btnSave.setText(_translate("Dialog", "저장"))
+        self.btnTagRun.setText(_translate("Dialog", "태그 기반 실행"))
+        self.btnIdRun.setText(_translate("Dialog", "아이디 기반 실행"))
+        self.btnUnfollow1.setText(_translate("Dialog", "맞팔X 언팔"))
+        self.btnUnfollow2.setText(_translate("Dialog", "전체 언팔"))
         self.btnCancel.setText(_translate("Dialog", "취소"))
 
-    def btnSaveClicked(self):
+    def btnTagRunClicked(self):
         self.saveData()
+        setMode(MODE_TAGRUN)
+        printLog(None, "해시태그 기반 좋아요/선팔/코멘트 시작")
+        self.close()
+
+    def btnIdRunClicked(self):
+        self.saveData()
+        setMode(MODE_IDRUN)
+        printLog(None, "아이디 기반 좋아요/선팔/코멘트 시작")
+        self.close()
+
+    def btnUnfollow1Clicked(self):
+        self.saveData()
+        setMode(MODE_UNFOLLOW1)
+        printLog(None, "맞팔 안한 계정 언팔로우 시작")
+        self.close()
+
+    def btnUnfollow2Clicked(self):
+        self.saveData()
+        setMode(MODE_UNFOLLOW2)
+        printLog(None, "전체 계정 언팔로우 시작")
         self.close()
 
     def btnCancelClicked(self):
@@ -340,7 +380,7 @@ class AccountDialog(QtWidgets.QDialog):
         # set column header
         self.tableAccount.setHorizontalHeaderLabels(['계정 사용', '아이디', '비밀번호',
                                                      '좋아요 사용', '팔로우 사용', '댓글 사용',
-                                                     '필터링 사용', '태그 그룹', '댓글 그룹',
+                                                     '필터링 사용', 'TAG/ID 그룹', '댓글 그룹',
                                                      '필터 목록', '총 반복 수', '태그 당 횟수',
                                                      '동작 속도'])
         self.tableAccount.horizontalHeaderItem(0).setToolTip('사용여부...')
@@ -603,7 +643,7 @@ class HashtagDialog(QtWidgets.QDialog):
 
     def retranslateUi(self):
         _translate = QtCore.QCoreApplication.translate
-        self.setWindowTitle(_translate("Dialog", "태그 설정"))
+        self.setWindowTitle(_translate("Dialog", "TAG/ID 설정"))
         self.btnAdd.setText(_translate("Dialog", "그룹 추가"))
         self.btnDel.setText(_translate("Dialog", "선택 삭제"))
         self.btnClear.setText(_translate("Dialog", "모두 삭제"))
@@ -664,11 +704,11 @@ class HashtagDialog(QtWidgets.QDialog):
         self.tableWidget.setRowCount(1)
 
         # set column header
-        self.tableWidget.setHorizontalHeaderLabels(['태그 그룹명', '태그1', '태그2',
-                                                    '태그3', '태그4', '태그5',
-                                                    '태그6', '태그7', '태그8',
-                                                    '태그9', '태그10'])
-        self.tableWidget.horizontalHeaderItem(0).setToolTip('태그 그룹명...')
+        self.tableWidget.setHorizontalHeaderLabels(['그룹명', '인덱스1', '인덱스2',
+                                                    '인덱스3', '인덱스4', '인덱스5',
+                                                    '인덱스6', '인덱스7', '인덱스8',
+                                                    '인덱스9', '인덱스10'])
+        self.tableWidget.horizontalHeaderItem(0).setToolTip('그룹명...')
         self.tableWidget.setColumnWidth(0, 120)
         for index in range(1, 11):
             self.tableWidget.setColumnWidth(index, 90)
@@ -943,11 +983,11 @@ class Ui_MainWindow(object):
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(920, 416)
+        MainWindow.resize(920, 356)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.grpLog = QtWidgets.QGroupBox(self.centralwidget)
-        self.grpLog.setGeometry(QtCore.QRect(10, 160, 891, 231))
+        self.grpLog.setGeometry(QtCore.QRect(10, 80, 891, 231))
         self.grpLog.setObjectName("grpLog")
         self.txtLog = QtWidgets.QTextBrowser(self.grpLog)
         self.txtLog.setGeometry(QtCore.QRect(20, 30, 851, 181))
@@ -959,9 +999,6 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        # self.btnSetAccount = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
-        # self.btnSetAccount.setObjectName("btnSetAccount")
-        # self.horizontalLayout_2.addWidget(self.btnSetAccount)
         self.btnSetHashtag = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
         self.btnSetHashtag.setObjectName("btnSetHashtag")
         self.horizontalLayout_2.addWidget(self.btnSetHashtag)
@@ -971,44 +1008,32 @@ class Ui_MainWindow(object):
         self.btnSetFilter = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
         self.btnSetFilter.setObjectName("btnSetFilter")
         self.horizontalLayout_2.addWidget(self.btnSetFilter)
-        self.chkHeadless = QtWidgets.QCheckBox(self.horizontalLayoutWidget_2)
-        self.chkHeadless.setObjectName("chkHeadless")
-        self.horizontalLayout_2.addWidget(self.chkHeadless)
-        self.horizontalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
-        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(10, 90, 711, 51))
-        self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
-        self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.btnUnfollow1 = QtWidgets.QPushButton(self.horizontalLayoutWidget)
-        self.btnUnfollow1.setObjectName("btnUnfollow1")
-        self.horizontalLayout.addWidget(self.btnUnfollow1)
-        self.btnUnfollow2 = QtWidgets.QPushButton(self.horizontalLayoutWidget)
-        self.btnUnfollow2.setObjectName("btnUnfollow2")
-        self.horizontalLayout.addWidget(self.btnUnfollow2)
-        self.btnStart = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        # self.chkHeadless = QtWidgets.QCheckBox(self.horizontalLayoutWidget_2)
+        # self.chkHeadless.setObjectName("chkHeadless")
+        # self.horizontalLayout_2.addWidget(self.chkHeadless)
+        # self.horizontalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
+        # self.horizontalLayoutWidget.setGeometry(QtCore.QRect(10, 90, 711, 51))
+        # self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
+        # self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget_2)
+        # self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        # self.horizontalLayout.setObjectName("horizontalLayout")
+        self.btnStart = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
         self.btnStart.setObjectName("btnStart")
-        self.horizontalLayout.addWidget(self.btnStart)
-        self.btnStop = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        self.horizontalLayout_2.addWidget(self.btnStart)
+        self.btnStop = QtWidgets.QPushButton(self.horizontalLayoutWidget_2)
         self.btnStop.setObjectName("btnStop")
-        self.horizontalLayout.addWidget(self.btnStop)
+        self.horizontalLayout_2.addWidget(self.btnStop)
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
-        # self.btnSetAccount.clicked.connect(self.btnSetAccountClicked)
-        # self.btnSetAccount.setIcon(QtGui.QIcon('icon/info.png'))
         self.btnSetHashtag.clicked.connect(self.btnSetHashtagClicked)
         self.btnSetHashtag.setIcon(QtGui.QIcon('icon/hashtag.png'))
         self.btnSetComment.clicked.connect(self.btnSetCommentClicked)
         self.btnSetComment.setIcon(QtGui.QIcon('icon/comments.svg'))
         self.btnSetFilter.clicked.connect(self.btnSetFilterClicked)
         self.btnSetFilter.setIcon(QtGui.QIcon('icon/like-ban.svg'))
-        self.btnUnfollow1.clicked.connect(self.btnUnfollow1Clicked)
-        self.btnUnfollow1.setIcon(QtGui.QIcon('icon/user-ban.svg'))
-        self.btnUnfollow2.clicked.connect(self.btnUnfollow2Clicked)
-        self.btnUnfollow2.setIcon(QtGui.QIcon('icon/user-ban.svg'))
         self.btnStart.clicked.connect(self.btnStartClicked)
         self.btnStart.setIcon(QtGui.QIcon('icon/start.png'))
         self.btnStop.clicked.connect(self.btnStopClicked)
@@ -1038,21 +1063,13 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", wndTitle))
         MainWindow.setWindowIcon(QtGui.QIcon('icon/instagram.png'))
         self.grpLog.setTitle(_translate("MainWindow", "로그"))
-        # self.btnSetAccount.setText(_translate("MainWindow", "계정 설정"))
-        self.btnSetHashtag.setText(_translate("MainWindow", "태그 설정"))
+        self.btnSetHashtag.setText(_translate("MainWindow", "TAG/ID 설정"))
         self.btnSetComment.setText(_translate("MainWindow", "댓글 설정"))
         self.btnSetFilter.setText(_translate("MainWindow", "필터 설정"))
-        self.btnUnfollow1.setText(_translate("MainWindow", "맞팔 언팔"))
-        self.btnUnfollow2.setText(_translate("MainWindow", "전부 언팔"))
         self.btnStart.setText(_translate("MainWindow", "동작 시작"))
         self.btnStop.setText(_translate("MainWindow", "동작 중지"))
-        self.chkHeadless.setText(_translate("MainWindow", "창 숨기기"))
+        # self.chkHeadless.setText(_translate("MainWindow", "창 숨기기"))
 
-    def btnSetAccountClicked(self):
-        dlg = AccountDialog()
-        dlg.exec_()
-        if dlg.bSetAccount:
-            self.bSetAccount = True
 
     def btnSetHashtagClicked(self):
         dlg = HashtagDialog()
@@ -1070,10 +1087,11 @@ class Ui_MainWindow(object):
         self.bSetAccount = False
 
     def btnStartClicked(self):
-        if not self.bSetAccount:
-            self.btnSetAccountClicked()
+        dlg = AccountDialog()
+        dlg.exec_()
+        if dlg.bSetAccount:
+            self.bSetAccount = True
 
-        setUnfollowData(0)
         if self.bSetAccount:
             printLog(self.txtLog, "동작 시작")
             accounts = getAccountData()
@@ -1095,10 +1113,10 @@ class Ui_MainWindow(object):
             self.connectionSock, self.addr = SERVER_SOCK.accept()
             printLog(self.txtLog, "[Server] 접속 완료")
 
-            if self.chkHeadless.isChecked():
-                self.connectionSock.send('True'.encode('utf-8'))
-            else:
-                self.connectionSock.send('False'.encode('utf-8'))
+            # if self.chkHeadless.isChecked():
+            #     self.connectionSock.send('True'.encode('utf-8'))
+            # else:
+            self.connectionSock.send('False'.encode('utf-8'))
 
             receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
             receiver.daemon = True
@@ -1106,77 +1124,6 @@ class Ui_MainWindow(object):
             self.bRunState = True
             self.bSetAccount = False
 
-    def btnUnfollow1Clicked(self):
-        if not self.bSetAccount:
-            self.btnSetAccountClicked()
-
-        setUnfollowData(1)
-        if self.bSetAccount:
-            printLog(self.txtLog, "언팔로우 시작")
-            accounts = getAccountData()
-
-            if not accounts:
-                return
-
-            # call run.py
-            if not self.bRetryConnect:
-                SERVER_SOCK.bind(('', PORT))
-                self.bRetryConnect = True
-            SERVER_SOCK.listen(1)
-
-            parser = threading.Thread(target=runInstaPy())
-            parser.daemon = True
-            parser.start()
-
-            self.connectionSock, self.addr = SERVER_SOCK.accept()
-            printLog(self.txtLog, "[Server] 접속 완료")
-
-            if self.chkHeadless.isChecked():
-                self.connectionSock.send('True'.encode('utf-8'))
-            else:
-                self.connectionSock.send('False'.encode('utf-8'))
-
-            receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
-            receiver.daemon = True
-            receiver.start()
-            self.bRunState = True
-            self.bSetAccount = False
-
-    def btnUnfollow2Clicked(self):
-        if not self.bSetAccount:
-            self.btnSetAccountClicked()
-
-        setUnfollowData(2)
-        if self.bSetAccount:
-            printLog(self.txtLog, "언팔로우 시작")
-            accounts = getAccountData()
-
-            if not accounts:
-                return
-
-            # call run.py
-            if not self.bRetryConnect:
-                SERVER_SOCK.bind(('', PORT))
-                self.bRetryConnect = True
-            SERVER_SOCK.listen(1)
-
-            parser = threading.Thread(target=runInstaPy())
-            parser.daemon = True
-            parser.start()
-
-            self.connectionSock, self.addr = SERVER_SOCK.accept()
-            printLog(self.txtLog, "[Server] 접속 완료")
-
-            if self.chkHeadless.isChecked():
-                self.connectionSock.send('True'.encode('utf-8'))
-            else:
-                self.connectionSock.send('False'.encode('utf-8'))
-
-            receiver = StoppableThread(receive, (self.txtLog, self.connectionSock,))
-            receiver.daemon = True
-            receiver.start()
-            self.bRunState = True
-            self.bSetAccount = False
 
     def btnStopClicked(self):
         if self.bRunState:
