@@ -7,7 +7,7 @@ from socket import *
 import ctypes
 from os.path import expanduser
 
-PGM_VERSION = 1.4
+PGM_VERSION = 1.5
 
 ERROR_NONE = 0
 ERROR_DRIVER = 1
@@ -1060,7 +1060,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        wndTitle = "Follower Maker v%.1f" % PGM_VERSION
+        wndTitle = "Follower Maker v%.1f (주의: 현재창 최소화 금지)" % PGM_VERSION
         MainWindow.setWindowTitle(_translate("MainWindow", wndTitle))
         MainWindow.setWindowIcon(QtGui.QIcon('icon/instagram.png'))
         self.grpLog.setTitle(_translate("MainWindow", "로그"))

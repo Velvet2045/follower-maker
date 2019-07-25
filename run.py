@@ -2,6 +2,7 @@ import sys, os, pickle
 import threading, time
 import instapy
 from socket import *
+import configparser
 
 TBL_USE_ACCOUNT = 0
 TBL_ID = 1
@@ -72,15 +73,23 @@ def startActivity(row=0,
                               show_logs=True)
     session.login()
     try:
+        config = configparser.ConfigParser()
+        config.read('./setup.ini')
+        spdLike = int(config['SETUP']['LIKE_SPEED'])
+        spdLikeMax = int(config['SETUP']['LIKE_SPEED_MAX'])
+        spdComment = int(config['SETUP']['COMMENT_SPEED'])
+        spdCommentMax = int(config['SETUP']['COMMENT_SPEED_MAX'])
+        spdfollow = int(config['SETUP']['FOLLOW_SPEED'])
+        spdfollowMax = int(config['SETUP']['FOLLOW_SPEED_MAX'])
         speed = int(accounts[row][TBL_SPEED])
         session.set_quota_supervisor(enabled=True,
                                      sleep_after=["likes", "comments", "follows", "unfollows",
                                                   "server_calls_h"], sleepyhead=True, stochastic_flow=True,
                                      notify_me=True,
-                                     peak_likes=(42 + 8 * speed, 500 + 100 * speed),
-                                     peak_comments=(13 + 2 * speed, 150 + 50 * speed),
-                                     peak_follows=(13 + 2 * speed, 150 + 50 * speed),
-                                     peak_unfollows=(13 + 2 * speed, 150 + 50 * speed),
+                                     peak_likes=(spdLike + 8 * speed, spdLikeMax + 100 * speed),
+                                     peak_comments=(spdComment + 2 * speed, spdCommentMax + 50 * speed),
+                                     peak_follows=(spdfollow + 2 * speed, spdfollowMax + 50 * speed),
+                                     peak_unfollows=(spdfollow + 2 * speed, spdfollowMax + 50 * speed),
                                      peak_server_calls=(None, 4700))
 
         session.set_skip_users(skip_private=True, private_percentage=100)
@@ -89,8 +98,10 @@ def startActivity(row=0,
         CLIENT_SOCKET.send("팔로워 목록 확인".encode('utf-8'))
         my_follwers = session.grab_followers(username=id, amount="full", live_match=True, store_locally=True)
         session.set_dont_include(my_follwers)
+        CLIENT_SOCKET.send("팔로워 목록 확인 완료".encode('utf-8'))
 
         if accounts[row][TBL_USE_COMMENT] and comments:
+            CLIENT_SOCKET.send("댓글/".encode('utf-8'))
             valComments = []
             for col in range(1, 11):
                 comment = comments[int(accounts[row][TBL_COMMENTS])][col]
@@ -101,6 +112,7 @@ def startActivity(row=0,
                 session.set_comments(valComments)
 
         if accounts[row][TBL_USE_FILTER] and filters:
+            CLIENT_SOCKET.send("필터/".encode('utf-8'))
             valFilters = []
             for col in range(1, 11):
                 filter = filters[int(accounts[row][TBL_FILTERS])][col]
@@ -119,23 +131,26 @@ def startActivity(row=0,
                 if not hashtag == 'None':
                     valHashtags.append(hashtag)
             if valHashtags and accounts[row][TBL_USE_LIKE]:
+                CLIENT_SOCKET.send("좋아요/".encode('utf-8'))
                 if accounts[row][TBL_USE_FOLLOW]:
+                    CLIENT_SOCKET.send("팔로우 ".encode('utf-8'))
                     session.set_do_follow(enabled=True, percentage=40)
-                    CLIENT_SOCKET.send("좋아요/댓글/팔로우 실행".encode('utf-8'))
+                    CLIENT_SOCKET.send("동작 실행".encode('utf-8'))
                 for cnt in range(0, int(accounts[row][TBL_REPEAT_CNT])):
                     session.like_by_tags(tags=valHashtags, amount=int(accounts[row][TBL_TAG_SHIFT]),
                                          use_smart_hashtags=False)
-                    CLIENT_SOCKET.send("좋아요/댓글/팔로우 완료".encode('utf-8'))
+                    CLIENT_SOCKET.send("동작 완료".encode('utf-8'))
                     s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개\n" % (session.liked_img,
                                                          session.commented, session.followed)
                     CLIENT_SOCKET.send(s.encode('utf-8'))
             else:
-                CLIENT_SOCKET.send("좋아요/댓글/팔로우 실행".encode('utf-8'))
+                CLIENT_SOCKET.send("팔로우 ".encode('utf-8'))
+                CLIENT_SOCKET.send("동작 실행".encode('utf-8'))
                 for cnt in range(0, int(accounts[row][TBL_REPEAT_CNT])):
                     session.follow_by_tags(tags=valHashtags, amount=int(accounts[row][TBL_TAG_SHIFT]),
                                            use_smart_hashtags=False)
-                    CLIENT_SOCKET.send("좋아요/댓글/팔로우 완료".encode('utf-8'))
-                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개\n" % (session.liked_img,
+                    CLIENT_SOCKET.send("동작 완료".encode('utf-8'))
+                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개" % (session.liked_img,
                                                          session.commented, session.followed)
                     CLIENT_SOCKET.send(s.encode('utf-8'))
         else:
@@ -156,7 +171,7 @@ def unfollowActivity1(row=0,
     session.login()
     try:
         # unfollow if not follow me
-        CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
+        CLIENT_SOCKET.send("팔로워 정리 실행\n".encode('utf-8'))
         session.unfollow_users(amount=120, nonFollowers=True, style="RANDOM",
                                unfollow_after=1 * 60 * 60, sleep_delay=100)
         s = "언팔로우: %d개\n" % (session.unfollowed)
@@ -182,7 +197,7 @@ def unfollowActivity2(row=0,
         CLIENT_SOCKET.send("팔로워 정리 실행".encode('utf-8'))
         session.unfollow_users(amount=120, allFollowing=True, style="RANDOM",
                                unfollow_after=1 * 60 * 60, sleep_delay=100)
-        s = "언팔로우: %d개\n" % (session.unfollowed)
+        s = "언팔로우: %d개" % (session.unfollowed)
         CLIENT_SOCKET.send(s.encode('utf-8'))
         CLIENT_SOCKET.send("팔로워 정리 완료".encode('utf-8'))
 
@@ -204,15 +219,23 @@ def followerActivity(row=0,
                               show_logs=True)
     session.login()
     try:
+        config = configparser.ConfigParser()
+        config.read('./setup.ini')
+        spdLike = int(config['SETUP']['LIKE_SPEED'])
+        spdLikeMax = int(config['SETUP']['LIKE_SPEED_MAX'])
+        spdComment = int(config['SETUP']['COMMENT_SPEED'])
+        spdCommentMax = int(config['SETUP']['COMMENT_SPEED_MAX'])
+        spdfollow = int(config['SETUP']['FOLLOW_SPEED'])
+        spdfollowMax = int(config['SETUP']['FOLLOW_SPEED_MAX'])
         speed = int(accounts[row][TBL_SPEED])
         session.set_quota_supervisor(enabled=True,
                                      sleep_after=["likes", "comments", "follows", "unfollows",
                                                   "server_calls_h"], sleepyhead=True, stochastic_flow=True,
                                      notify_me=True,
-                                     peak_likes=(42 + 8 * speed, 500 + 100 * speed),
-                                     peak_comments=(13 + 2 * speed, 150 + 50 * speed),
-                                     peak_follows=(13 + 2 * speed, 150 + 50 * speed),
-                                     peak_unfollows=(13 + 2 * speed, 150 + 50 * speed),
+                                     peak_likes=(spdLike + 8 * speed, spdLikeMax + 100 * speed),
+                                     peak_comments=(spdComment + 2 * speed, spdCommentMax + 50 * speed),
+                                     peak_follows=(spdfollow + 2 * speed, spdfollowMax + 50 * speed),
+                                     peak_unfollows=(spdfollow + 2 * speed, spdfollowMax + 50 * speed),
                                      peak_server_calls=(None, 4700))
 
         session.set_skip_users(skip_private=True, private_percentage=100)
@@ -224,6 +247,7 @@ def followerActivity(row=0,
         session.set_user_interact(amount=5, randomize=True, percentage=50, media='Photo')
 
         if accounts[row][TBL_USE_COMMENT] and comments:
+            CLIENT_SOCKET.send("댓글 설정 입력".encode('utf-8'))
             valComments = []
             for col in range(1, 11):
                 comment = comments[int(accounts[row][TBL_COMMENTS])][col]
@@ -234,6 +258,7 @@ def followerActivity(row=0,
                 session.set_comments(valComments)
 
         if accounts[row][TBL_USE_FILTER] and filters:
+            CLIENT_SOCKET.send("필터/".encode('utf-8'))
             valFilters = []
             for col in range(1, 11):
                 filter = filters[int(accounts[row][TBL_FILTERS])][col]
@@ -252,24 +277,27 @@ def followerActivity(row=0,
                 if not hashtag == 'None':
                     valHashtags.append(hashtag)
             if valHashtags and accounts[row][TBL_USE_LIKE]:
+                CLIENT_SOCKET.send("좋아요/".encode('utf-8'))
+                CLIENT_SOCKET.send("팔로우 ".encode('utf-8'))
                 session.set_do_like(enabled=True, percentage=100)
                 if accounts[row][TBL_USE_FOLLOW]:
                     session.set_do_follow(enabled=True, percentage=75)
-                    CLIENT_SOCKET.send("좋아요/댓글/팔로우 실행".encode('utf-8'))
+                    CLIENT_SOCKET.send("동작 실행".encode('utf-8'))
                 for cnt in range(0, int(accounts[row][TBL_REPEAT_CNT])):
                     session.interact_user_followers(valHashtags, amount=int(accounts[row][TBL_TAG_SHIFT]),
                                                     randomize=True)
-                    CLIENT_SOCKET.send("좋아요/댓글/팔로우 완료".encode('utf-8'))
-                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개\n" % (session.liked_img, session.commented, session.followed)
+                    CLIENT_SOCKET.send("동작 완료".encode('utf-8'))
+                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개" % (session.liked_img, session.commented, session.followed)
                     CLIENT_SOCKET.send(s.encode('utf-8'))
             else:
+                CLIENT_SOCKET.send("팔로우 ".encode('utf-8'))
                 session.set_do_follow(enabled=True, percentage=75)
-                CLIENT_SOCKET.send("좋아요/댓글/팔로우 실행".encode('utf-8'))
+                CLIENT_SOCKET.send("동작 실행".encode('utf-8'))
                 for cnt in range(0, int(accounts[row][TBL_REPEAT_CNT])):
                     session.interact_user_followers(valHashtags, amount=int(accounts[row][TBL_TAG_SHIFT]),
                                                     randomize=True)
-                    CLIENT_SOCKET.send("좋아요/댓글/팔로우 완료".encode('utf-8'))
-                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개\n" % (session.liked_img, session.commented, session.followed)
+                    CLIENT_SOCKET.send("동작 완료".encode('utf-8'))
+                    s = "좋아요: %d개, 댓글: %d개, 팔로우: %d개" % (session.liked_img, session.commented, session.followed)
                     CLIENT_SOCKET.send(s.encode('utf-8'))
         else:
                 CLIENT_SOCKET.send("좋아요 사용에 체크해주세요.".encode('utf-8'))
